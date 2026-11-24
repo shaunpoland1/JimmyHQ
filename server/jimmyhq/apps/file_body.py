@@ -125,7 +125,7 @@ def check_body_path(value: Any) -> str:
                                      "own data folder, with forward slashes and no \"..\", "
                                      "such as \"uploads/0f1e2d.jpg\". Nothing was sent."
                           ) from None
-    if path.split("/")[0] in CORE_FILES:
+    if path.split("/")[0].casefold() in CORE_FILES:  # one file on a disk that ignores case
         raise BridgeError("not_allowed", "That file is JimmyHQ's own store of your app's "
                                          "values and records, which is not sent as a file. "
                                          "Nothing was sent. Read what you need with "

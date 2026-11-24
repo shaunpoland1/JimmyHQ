@@ -70,7 +70,15 @@ is a sentence that names the field.
   [Working with agents](#working-with-agents)), `feeds` (see
   [Feeds between apps](#feeds-between-apps)). Only a full app's program can read a secret.
 - A tool's `effect` is one of `read`, `record`, `send`, `create`, `update`, `delete`,
-  `spend`, `access`, `change`.
+  `spend`, `access`, `change`. Each tool's name and effect, and the tools each role
+  offers, are part of what the owner agrees to (they are in the app's fingerprint). An
+  update that offers a new tool, moves a tool to an effect the ladder guards less (from
+  closest: `send`, `spend`, `delete` and `access`; then `create`, `update` and `change`;
+  then `record`; then `read`), gives a role more tools, or adds a role an agent of the
+  owner's already holds, asks the owner again, so it never goes in by itself even with
+  `apps.auto_update` on "auto". A tool removed or guarded more, a role that offers fewer
+  tools, a new role nobody holds yet, or new words for a tool ask nothing. An app that
+  offers agents no tool keeps the fingerprint it had.
 
 Permissions, and the sentence the owner reads for each:
 
@@ -189,6 +197,13 @@ are allowed. Only web file types are served (HTML, JS, CSS, JSON, images, fonts,
 | `ui.limits` | | What the owner lets an app do at the edges, as plain numbers, so the app sizes its work to them instead of finding them out by being refused: `{save_max_mb, save_parts, save_per_minute, save_html, call_max_kb, picture_px}`. They are `apps.save_max_mb` (the most one saved file may weigh, in whole megabytes), `apps.save_parts` (files from one click), `apps.save_per_minute` (files in a minute), `apps.save_html` (`true` when a web page is saved as a web page), `apps.call_max_kb` (the most one answer from a full app's program may weigh, in KB) and `apps.picture_px` (the longest side of a picture from `files.picture`), as they are when you ask. It needs no permission, takes no arguments and tells nothing else about the owner; the server answers it, so it is cheap but counts as a call. An older JimmyHQ refuses it: catch that and keep to the numbers your app always used. A full app's program asks with `app.limits()`. |
 | `ui.save` | | `{name?, type?, text}` or `{name?, type?, bytes}` (or `{name?, blob}`): hands the owner a file to keep: text, a web page, or a picture. A page cannot download by itself (its frame is sandboxed without downloads), so the shell, outside the frame, makes the file and the browser saves it. The owner sees each one named, with its size, as it is saved. It needs the owner's own click or key press inside your page within the last 5 seconds. One click may save a few files in a row, for an export split into parts: up to `apps.save_parts` (5 by default, at most 10; Settings, Apps), the first within 5 seconds of the click, each next within 5 seconds of the one before, and the run over within 30 seconds of the click. After that, or after a pause, a save is refused until the owner touches the page again (a browser may also ask the owner whether to allow several downloads). However many clicks there are, one app saves at most `apps.save_per_minute` files (12 by default) in any minute; past that a save is refused with `quota` until the minute has moved on. (The shell cannot see inside your frame, so it takes a touch to be yours when the browser says there was one, your frame holds the focus, and the shell heard no click or key of its own since; asking again while one click's activation lasts is the same touch. A new touch, and so a new run, begins when the browser's activation was seen to end and begin again, or when the first one's 5 seconds have passed and the browser still says the tab was touched. What the page says never begins one: the bridge script sends `hq.ui.touch()` on each real click or key press, but a page can send that without any click, so the shell takes it only as a reason to look at the browser's activation now. So a second click within 5 seconds of the first is the same touch: it can save only what is left of that touch's `apps.save_parts` files, and a run that has used them all waits, at most 5 seconds, for the next click to be a new touch. Dictation and Settings follow the same touches. The per-minute limit holds however many touches there are.) A file may weigh at most `apps.save_max_mb` (8 MB by default), counted in bytes; more is refused with `too_large`, so split it into parts and save them one after another. **Text.** `text` is a string of at least one character. `type` is one of `text/plain` (`.txt`), `text/markdown` (`.md`), `text/csv` (`.csv`), `application/json` (`.json`) or `text/html` (`.html`); anything else is saved as plain text. **A web page.** `text/html` is saved as a download only, never opened or shown by JimmyHQ. Because a saved page opened later from the disk is no longer inside your frame's sandbox, JimmyHQ puts a Content-Security-Policy meta tag (and the HTML5 doctype and a character set) ahead of everything you wrote, which blocks every script (inline and remote), form submission, `<base>` and every load that is not a `data:` picture, font or media, and renames each `<meta` and `<link` tag you wrote (to `<x-meta`, `<x-link`) so a refresh or a prefetch hidden in one does nothing. So a saved page is a document, not a program: put its styles in a `<style>` and its pictures in `data:` addresses. What stays: a link in it goes where it points when the owner clicks it, and the owner is told, as the file is saved, that it is a web page saved with its scripts switched off (in full the first time your app saves one). The owner can turn web pages off (`apps.save_html`); `text/html` is then saved as plain text, `.txt`, as it used to be always. **Pictures.** `bytes` is an `ArrayBuffer` or a typed array (for a canvas, `await canvas.convertToBlob()` or `toBlob`, then `hq.ui.save({name, blob})`, which sends the Blob's bytes and takes its type), with `type` one of `image/png` (`.png`), `image/jpeg` (`.jpg`) or `image/webp` (`.webp`). The bytes are copied as they arrive and must start the way that picture type does, or the call is refused with `invalid`: a `.png` is never a page in disguise. Bytes cross the bridge as they are (several MB is fine); no base64 is needed. Bytes with any other type, a picture type with `text`, or both `text` and `bytes` are refused. `type` only picks the file's ending: JimmyHQ always gives the browser the file as an opaque download (`application/octet-stream`). `name` is made safe to be a file name anywhere (no path, no control, format or invisible characters, no leading dot, no device names, at most 100 characters before the ending) and is shown to the owner in quotes, shortened, after JimmyHQ's own words and always ends with the type's ending, so `report` as Markdown is `report.md`; with no usable name it is `file`. There is no address and no navigation: the shell makes the object address, clicks it and revokes it, and the page never sees it. It resolves `{name, bytes}` once the browser has been given the file; it cannot tell whether the owner then chose to keep it. Use it for a button such as "Save as a file", beside Copy. |
 
+A page makes each call through the bridge script, one group to a name before the dot:
+`hq.model.embed({texts})`, `hq.web.search({query})`, `hq.web.read({url})` and
+`hq.hosts.list()` are the page's forms of `model.embed`, `web.search`, `web.read` and
+`hosts.list`, with the permission each row above names. A page may also reach a host the
+owner gave the app himself with `hq.net.fetch`, exactly as it reaches a `net:<host>`
+host.
+
 Who is asking is never an argument. The app is the one JimmyHQ mounted, and a call that
 tries to say otherwise is refused. Events arrive with `hq.on(name, fn)`: `theme`,
 `visible` and `settings.changed`, and for a full app whatever its own program sends with
@@ -219,7 +234,8 @@ await hq.net.fetch({url: "https://api.example.com/v1/posts", method: "POST", jso
 - A file part's `type`, and a data URL's, default to what a picture's bytes say.
 - Each path is checked by the manifest's path rule (forward slashes, no `..`, no drive,
   no name Windows keeps for a device), walked refusing any link, and proven to stay inside
-  the folder. The core's own `app.db` is never sent.
+  the folder. The core's own `app.db` (and its `-wal`, `-shm` and `-journal` files) is never
+  sent, however the name's letters are cased.
 - Each file may weigh `apps.net_fetch_file_max_mb` (100) and the whole body, as sent,
   `apps.net_fetch_body_max_mb` (150); a file as base64 takes a third more. The length is
   worked out first and sent as `Content-Length`. Such a request may take
@@ -454,7 +470,11 @@ for one purpose, up to a small number (1 to 5):
 
 An app reaches public https hosts only: an address on the owner's own machine or network
 is refused, whatever a name points at, so an app cannot probe his router, his printer or
-JimmyHQ itself. A service the owner wants an app to use may live exactly there, such as an
+JimmyHQ itself. That holds for a host the manifest names (`net:<host>`) as much as for one
+the owner gave the app, and a host the owner let web lookup read on his network
+(`lookup.allow_private_hosts`) is no exception: that setting is for web lookup only, and
+`net.fetch` refuses such an address with `not_allowed`, pointing to "Addresses on your own
+network". A service the owner wants an app to use may live exactly there, such as an
 image server on another computer at home, on a tailnet, or on this computer. For that, the
 owner, and only the owner, adds one exact address for one app:
 
@@ -485,7 +505,11 @@ owner, and only the owner, adds one exact address for one app:
   ```
 - **Exactly that address.** The request's scheme, host and port must be exactly one the
   owner added; another port, `https` for `http`, another name for the same computer, or a
-  neighbour is refused. Redirects are handed back, never followed.
+  neighbour is refused. Redirects are handed back, never followed. A host the app may also
+  reach the ordinary way (`https://<host>` on the standard port, with `net:<host>` or given
+  by the owner) goes the ordinary way while it leads to public addresses; once it leads to
+  his own network, it is held to the rules here, and only if he added exactly
+  `https://<host>`.
 - **Checked again at every request.** The name is resolved again, every rule here is
   checked again, and every address it gives now must be one of those stored when the owner
   added it: whoever runs the name's DNS cannot point it at another machine on his network.
@@ -1028,7 +1052,7 @@ soon after starting, is held back: the Apps screen says "Held back after crashin
 record says so (`apps.held_back`), and by default the owner gets a card. It stays
 installed and switched on and its data is untouched; Restart on the Apps screen starts it
 again. `apps.crash_loop` can instead hold it back quietly, or keep restarting it ever more
-slowly. JimmyHQ never switches it off or rolls it back by itself.
+slowly. JimmyHQ never switches it off or rolls it back by itself unless you choose that in `apps.crash_loop`. When it goes back to the version before a crashing update, its card says whether the data went back to the copy taken before the update (`apps.crash_rollback_restores_data`) and, if so, that what the new version wrote is kept as a backup Roll back can bring back until a later update or roll back deletes the older versions.
 
 ## Messages from your devices
 
@@ -1103,7 +1127,16 @@ one app, and for every name that app declares. An update never changes the switc
 keys, and neither does a restart. Removing the app and deleting its data removes the keys
 and the switch with it (a fresh install does not start open). Removing it while keeping its
 data keeps the keys but switches the door off, so installing it again opens nothing until the
-owner switches it on: a reinstall never reopens a door without their click. The removal
+owner switches it on: a reinstall never reopens a door without their click. The keys belong
+to that install, not to the id: they come back only when the same app is installed again,
+told by where it came from, never by its manifest (the same git address, the same app that
+ships with JimmyHQ, or the same folder on this computer, by its full path; an update moves
+the app to where that version came from). An app from anywhere else under the same id
+starts with no keys, and the kept ones are removed for good, each recorded as
+`apps.inbound_key_removed`, with the old counts and receipts. Keys kept by an app installed
+from a folder before JimmyHQ kept where installs came from cannot be told apart, and are
+removed the same way. Anyone who can push to that git address or write in that folder can
+put another app there, so it is only as safe as the place itself. The removal
 dialog says so ("its keys are kept; its door will be off until you switch it on again"), and
 so does the app's page when keys exist and the door is off ("This door was switched off when
 the app was removed, or by you. Its keys still work once you switch it on.").
@@ -1249,6 +1282,12 @@ app prints itself with `tape.print`. Nothing else is needed.
   reader that needs the source reads it itself through its own permissions (Posts reads
   each article with `web.read`, and never takes Reader's text as its own). This keeps the
   producer's records and program out of every other app's reach.
+- What each feed carries is part of what the owner agrees to (each feed's name and kind are
+  in the app's fingerprint). An update that points a feed at another of its kinds, or adds
+  a feed that an installed app already holds a grant for, asks the owner again, so it never
+  goes in by itself even with `apps.auto_update` on "auto". A new label or description, a
+  feed removed, or a new feed nobody may read yet asks nothing. An app that offers no feed
+  keeps the fingerprint it had.
 
 **Reading.** Another full app asks for `feed:<app>.<feed>`: one feed of one app, with no
 wildcard. The install dialog says it in the producer's words ("Read "Articles" from
@@ -1298,10 +1337,12 @@ jimmyhq apps check plant_care          # the checks it must pass before anyone i
   `jimmyhq_app.testing.FakeCore`, with no JimmyHQ at all.
 - **dev** checks the folder, asks you once (as an install does), installs it marked
   "Development" (its files are served uncached) and then looks at the folder every second.
-  Each change is checked and the new copy put in place with its data kept: the program is
-  started again and its open pages load again. If the change asks for a permission you did
-  not agree to, the loop stops and says so; run it again to be asked. Each copy is
-  recorded as the app removed (data kept) and installed again.
+  Each change is checked and the new copy put in place the way an update is, even under
+  the same version number: its data, secrets, roles, device keys and hosts stay, the
+  program is started again and its open pages load again. If the change asks for anything
+  you did not agree to (a permission, or more for its agent tools), the loop stops and
+  says so; run it again to be asked. Each copy is recorded as an update, with its data
+  copied first and the last `apps.keep_versions` copies kept, as any update.
 - **check** reads the manifest and every file it names, the folder's size and shape (no
   links), compiles each Python file (never runs it), and looks for `pyproject.toml` with
   its `uv.lock`. Each finding is a sentence, a problem or a warning.

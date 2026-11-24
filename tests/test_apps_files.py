@@ -83,7 +83,7 @@ def mount(owner, app_id="water"):
 def test_the_owner_mounts_an_app_and_is_told_what_the_page_needs(owner, water):
     made = mount(owner)
     assert set(made) == {"mount", "base", "entry", "app", "name", "version", "tier",
-                         "permissions", "local_addresses", "development", "api",
+                         "permissions", "local_addresses", "owner_hosts", "development", "api",
                          "timezone", "week_start",
                          "upload_max_mb", "thumbnail_px", "picture_px", "picture_max_mb",
                          "pictures_per_minute", "dictate_max_s", "private",

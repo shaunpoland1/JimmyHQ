@@ -6,12 +6,16 @@ page say about who reads what."""
 
 from __future__ import annotations
 
+import hashlib
+import json
+
 import pytest
 
 from apps_full_helpers import AppClient, client_for, full_app, install_full
 from apps_install_helpers import install_folder
-from jimmyhq.apps import feeds, install, manifest, permissions, quotas
+from jimmyhq.apps import feeds, install, manifest, permissions, quotas, store, update
 from jimmyhq.apps.manifest import ManifestError
+from jimmyhq.apps.store import AppError
 
 OFFERED = {"type": "object", "properties": {"url": {"type": "string"},
                                             "title": {"type": "string"}},
@@ -368,6 +372,94 @@ def test_readers_are_found_from_what_the_owner_granted_not_from_what_a_manifest_
     assert feeds.readers_of(core, "finder", "articles") == ["Writer"]
     install_folder(core, full_app(tmp_path, "third", permissions=["feed:finder.stories"]))
     assert feeds.readers_of(core, "finder", "articles") == ["Writer"]
+
+
+# --- a producer's update -------------------------------------------------------------------
+
+
+def newer_finder(tmp_path, feeds_, version: str = "1.1.0"):
+    return full_app(tmp_path / version, "finder", feeds=feeds_, version=version)
+
+
+def by_itself(core, folder) -> dict:
+    """As ``update.apply_by_itself`` puts a found update in place: with nobody asking."""
+    plan = update.plan_folder(core, "finder", folder)
+    try:
+        update.confirm_update(core, plan["plan"], plan["fingerprint"], actor="system")
+    except AppError as refused:
+        assert refused.status == 403 and "only you can agree" in refused.detail
+    return plan
+
+
+def test_the_mark_of_what_was_agreed_covers_each_feeds_name_and_kind_in_any_order():
+    two = [*ARTICLES, {**ARTICLES[0], "name": "notes", "kind": "note"}]
+    mark = permissions.fingerprint(manifest.parse(base(feeds=two)))
+    assert mark == permissions.fingerprint(manifest.parse(base(feeds=two[::-1])))
+    assert mark != permissions.fingerprint(manifest.parse(base(feeds=[
+        two[0], {**two[1], "kind": "article.offered"}])))
+    assert mark != permissions.fingerprint(manifest.parse(base(feeds=two[:1])))
+    relabelled = [{**f, "label": "Other words"} for f in two]
+    assert mark == permissions.fingerprint(manifest.parse(base(feeds=relabelled)))
+
+
+def test_an_app_that_offers_no_feed_keeps_the_mark_it_was_installed_with():
+    plain = manifest.parse(base(permissions=["tasks.read"]))
+    parts = {"v": 1, "id": "finder", "tier": "full", "private": False,
+             "permissions": ["tasks.read"]}  # the mark as it was made before feeds counted
+    text = json.dumps(parts, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    assert permissions.fingerprint(plain) == hashlib.sha256(text.encode("ascii")).hexdigest()
+
+
+def test_an_update_that_points_a_feed_at_another_kind_waits_for_the_owner(core, tmp_path):
+    producer(core, tmp_path)
+    consumer(core, tmp_path)
+    core.settings.set("apps.auto_update", "auto", actor="owner")
+    plan = by_itself(core, newer_finder(tmp_path, [{**ARTICLES[0], "kind": "note"}]))
+    assert plan["update"]["needs_consent"] is True
+    [line] = plan["update"]["ask"]
+    assert line["permission"] == permissions.FEED_OFFERED and line["host"] == "articles"
+    assert "\"article.offered\"" in line["sentence"] and "\"note\"" in line["sentence"]
+    assert store.get(core, "finder")["version"] == "1.0.0"
+
+
+def test_a_new_feed_an_installed_app_already_may_read_waits_for_the_owner(core, tmp_path):
+    producer(core, tmp_path, feeds=[{**ARTICLES[0], "name": "stories"}])
+    consumer(core, tmp_path)  # granted finder.articles, which Finder does not offer yet
+    plan = by_itself(core, newer_finder(tmp_path, [{**ARTICLES[0], "name": "stories"},
+                                                   ARTICLES[0]]))
+    assert [x["id"] for x in plan["update"]["ask"]] == [
+        f"{permissions.FEED_OFFERED}:articles"]
+    assert store.get(core, "finder")["version"] == "1.0.0"
+
+
+def test_a_new_feed_nobody_may_read_yet_or_a_feed_relabelled_goes_in_by_itself(
+        core, tmp_path):
+    producer(core, tmp_path)
+    consumer(core, tmp_path)
+    plan = by_itself(core, newer_finder(tmp_path, [
+        {**ARTICLES[0], "label": "Chosen articles"},
+        {**ARTICLES[0], "name": "notes", "kind": "note"}]))
+    assert plan["update"]["needs_consent"] is False
+    assert store.get(core, "finder")["version"] == "1.1.0"
+
+
+def test_a_producer_installed_under_the_old_mark_updates_with_its_feeds_unchanged_by_itself(
+        core, tmp_path, monkeypatch):
+    def old_rule(m) -> str:  # the mark before feeds counted, as an earlier JimmyHQ kept it
+        parts = {"v": 1, "id": m.id, "tier": m.tier, "private": bool(m.private),
+                 "permissions": sorted(set(m.permissions))}
+        text = json.dumps(parts, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+        return hashlib.sha256(text.encode("ascii")).hexdigest()
+
+    with monkeypatch.context() as patched:
+        patched.setattr(permissions, "fingerprint", old_rule)
+        producer(core, tmp_path)
+    consumer(core, tmp_path)
+    kept = store.get(core, "finder")["fingerprint"]
+    assert kept != permissions.fingerprint(store.manifest_of(core, "finder"))
+    plan = by_itself(core, newer_finder(tmp_path, ARTICLES))
+    assert plan["update"]["needs_consent"] is False
+    assert store.get(core, "finder")["version"] == "1.1.0"
 
 
 def test_an_app_reading_from_a_place_past_the_end_of_a_restored_tape_is_told_the_end(pair):

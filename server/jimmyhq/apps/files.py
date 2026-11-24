@@ -11,7 +11,11 @@ to another version.
 **Isolation.** Every answer under ``/appfiles/``, a refusal included, carries the
 policy in ``CSP``. Its ``sandbox`` gives the page an opaque origin even if it is opened
 outside the shell's frame, so it never shares JimmyHQ's origin, cookies or storage;
-``connect-src 'none'`` leaves the bridge as its only way to reach anything.
+``connect-src 'none'`` leaves the bridge as its only way to reach anything. ``'self'``
+in ``img-src`` and the rest lets a page ask for any address here, ``/api/`` included, but
+never as the owner: from an opaque origin every such request is cross-site, so the
+browser leaves out the session cookie, which is ``SameSite=Lax`` (``web.app``), and
+``/api/`` answers it as it would anyone signed out.
 
 Because the origin is opaque, the page's own module scripts and fonts are fetched as
 cross-origin requests, and a browser will not hand them over without
@@ -265,6 +269,8 @@ def mint_mount(core: Core, app_id: str, screen: Any = None) -> dict[str, Any]:
             # Addresses on the owner's own network he let it reach (local_reach), for the
             # shell's early check only; the server checks every request again.
             "local_addresses": list(app.local_addresses),
+            # The hosts he gave the app himself on its page, for the same early check.
+            "owner_hosts": list(app.owner_hosts),
             "development": app.development, "api": f"{APP_API[0]}.{APP_API[1]}",
             # The shell refuses a larger picture before sending it; the server checks again.
             "upload_max_mb": int(core.settings.get("apps.upload_max_mb")),

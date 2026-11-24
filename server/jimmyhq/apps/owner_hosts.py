@@ -26,7 +26,7 @@ reached by (``check_not_own``); not one it has already (``check_new``); room und
 app's ``max`` (``check_room``); and the name resolves now, every address it gives
 public (``check_public``, by web lookup's own address rule in ``lookup.safety``, with no
 exception the owner made for web lookup). ``net.fetch`` resolves and checks it again on
-every request (``bridge.check_owner_host_public``), so a name that later points at a
+every request (``bridge.check_granted_host_public``), so a name that later points at a
 private address reaches nothing.
 
 **What it gives.** An owner-granted host is treated by ``net.fetch`` exactly like a host

@@ -794,6 +794,17 @@ def test_a_granted_name_that_points_at_a_private_address_is_refused(core, apps):
     assert web.seen == []
 
 
+def test_the_owners_web_lookup_exception_never_lets_a_granted_host_reach_a_private_address(
+        core, apps):
+    apps.add(WATER, granted=[f"net:{HOST}"])
+    core.settings.set("lookup.allow_private_hosts", [HOST], actor="owner")
+    web = internet(core, names={HOST: [private(10, 0, 0, 5)]})
+    error = refused(core, "water", "net.fetch", {"url": f"https://{HOST}/v1/items"})
+    assert error.code == "not_allowed" and "Nothing was sent" in error.message
+    assert "Addresses on your own network" in error.message
+    assert web.seen == [] and events(core, "apps.fetched") == []
+
+
 def test_a_redirect_is_handed_back_and_never_followed(core, apps):
     apps.add(WATER, granted=[f"net:{HOST}"])
     web = internet(core, pages={

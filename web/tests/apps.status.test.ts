@@ -130,7 +130,7 @@ test("removing an app says what goes and what stays, and where the data is", () 
 test("removing a full app with its data kept says its keys are kept and its door will be off", () => {
   const line = keptLine({ id: "house", tier: "full" });
   assert.match(line, /picks up where it left off/);
-  assert.match(line, /its keys are kept; its door will be off until you switch it on again/);
+  assert.match(line, /its keys are kept for this same app; its door will be off until you switch it on again/);
   assert.match(DOOR_ERASED, /keys.*deleted/);
 });
 

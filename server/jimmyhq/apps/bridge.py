@@ -717,16 +717,47 @@ def fetch_target(app: Installed, url: Any) -> Any:
     return parsed
 
 
-def check_owner_host_public(app: Installed, checked: Any) -> None:
-    """Rule ``an_owner_host_is_always_public``: a host the owner gave an app is checked
-    where its name resolves at every request, like any host, and may never be one the
-    owner let web lookup read on his private network: what a site's name points at can
-    change after it was given."""
-    if checked.allowed_private and checked.host in app.owner_hosts \
-            and not allows(app.granted, "net", host=checked.host):
-        raise BridgeError("not_allowed", f"{checked.host} now leads to an address on the "
-                                         "owner's own machine or private network, which an "
-                                         "app is never sent to. Nothing was sent.")
+def check_granted_host_public(checked: Any) -> None:
+    """Rule ``a_granted_host_is_always_public``: a host an app reaches the ordinary way,
+    whether its manifest names it (``net:<host>``) or the owner gave it (``owner_hosts``),
+    is checked where its name resolves at every request and may never lead to the owner's
+    own machine or private network, even when the owner let web lookup read that host
+    there (``lookup.allow_private_hosts``): that exception is for web lookup, and what a
+    site's name points at can change after it was granted. The one way an app reaches such
+    an address is the owner adding it under "Addresses on your own network"
+    (``local_reach``)."""
+    if checked.allowed_private:
+        raise BridgeError("not_allowed", f"{checked.host} leads to an address on the "
+                                         "owner's own machine or private network. Nothing was "
+                                         "sent. An app reaches such an address only when "
+                                         "the owner adds it himself under \"Addresses on your "
+                                         "own network\" on your app's page under Apps; tell "
+                                         "him which in your settings.")
+
+
+async def check_ordinary(core: Any, app: Installed, parsed: Any, resolver: Any) -> Any:
+    """Resolve and check a host the app reaches the ordinary way, now. A name that leads to
+    a private address is refused (``check_granted_host_public``) unless the owner added
+    exactly that address under "Addresses on your own network", when it is held to those
+    rules instead (``local_reach.check_at_connect``). Raises ``WebError`` or
+    ``BridgeError``."""
+    from jimmyhq.apps import local_reach  # noqa: PLC0415
+    from jimmyhq.lookup import safety  # noqa: PLC0415
+    from jimmyhq.lookup.errors import WebError  # noqa: PLC0415
+
+    added = local_reach.matches(app.local_addresses, parsed)
+    try:
+        checked = await safety.check(core, parsed.url, resolver)
+    except WebError as exc:
+        if exc.kind != "refused" or not added:
+            raise
+        checked = None
+    if checked is None or (checked.allowed_private and added):
+        led = dict(app.local_resolved).get(
+            local_reach.origin_of(parsed.scheme, parsed.host, parsed.port), ())
+        return await local_reach.check_at_connect(core, parsed, resolver, led)
+    check_granted_host_public(checked)
+    return checked
 
 
 def hosts_list(ctx: Ctx, args: dict[str, Any]) -> dict[str, Any]:
@@ -939,7 +970,6 @@ async def net_fetch(ctx: Ctx, args: dict[str, Any]) -> dict[str, Any]:
 
     from jimmyhq import lookup  # noqa: PLC0415
     from jimmyhq.apps import file_body, local_reach  # noqa: PLC0415 - they import this module
-    from jimmyhq.lookup import safety  # noqa: PLC0415
     from jimmyhq.lookup.errors import WebError  # noqa: PLC0415
 
     only("net.fetch", args, ("url", "method", "headers", "body", "json", "file", "multipart",
@@ -1010,8 +1040,7 @@ async def net_fetch(ctx: Ctx, args: dict[str, Any]) -> dict[str, Any]:
                 checked = await local_reach.check_at_connect(core, parsed, service.resolver,
                                                              led)
             else:
-                checked = await safety.check(core, parsed.url, service.resolver)
-                check_owner_host_public(ctx.app, checked)
+                checked = await check_ordinary(core, ctx.app, parsed, service.resolver)
             async with service.client(timeout_s) as client:
                 request = client.build_request(
                     method, checked.connect_url, content=content,

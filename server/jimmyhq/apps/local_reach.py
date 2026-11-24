@@ -33,7 +33,10 @@ confirmed, and again at every request:
   an IPv6 address can carry an IPv4 one (``carried``).
 - ``own_port_problem``: never a port JimmyHQ itself listens on, on any host: its main port,
   and the door's own port when the door is set to listen there. On this computer, also any
-  port this process listens on now (each browser session's fence proxy).
+  port this process listens on now. An agent's browser fence (``browser.fence``) listens
+  in the village process, so the web process does not know its port and the owner could
+  add it; that gains an app nothing, because the fence forwards only what a browser sends
+  a proxy (a full ``http://`` address, or ``CONNECT``), and ``net.fetch`` sends neither.
 - ``own_name_problem``: never a name JimmyHQ itself is reached by (``safety.own_names``, the
   door's names), on any port: such a name may lead to JimmyHQ through a tunnel or a
   ``tailscale serve`` mapping on a port of its own. ``localhost`` and an address written as
@@ -298,7 +301,9 @@ def metadata_problem(host: str, found: Collection[IP]) -> str | None:
 
 def own_port_problem(core: Core, port: int, found: Collection[IP] = ()) -> str | None:
     """Rule ``never_jimmyhq_itself``: not a port JimmyHQ listens on, on any host; on this
-    computer, not one this process listens on now either."""
+    computer, not one this process listens on now either. (A port another of JimmyHQ's
+    processes opened, such as an agent's browser fence, is not seen here: see the module's
+    notes for why that one gains an app nothing.)"""
     from jimmyhq.lookup import safety  # noqa: PLC0415
 
     if port in own_ports(core):

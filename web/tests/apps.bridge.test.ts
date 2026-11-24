@@ -255,9 +255,10 @@ test("each call that needs a permission is refused without it and allowed with i
 test("every call on the list has a rule this file tests", () => {
   assert.deepEqual(Object.keys(CALLS).sort(), [
     "app.call", "bench.file", "files.picking", "files.picture", "files.thumbnail", "files.upload",
-    "memory.recall", "model.ask", "net.fetch", "records.create", "records.delete", "records.get", "records.list", "records.update",
+    "hosts.list", "memory.recall", "model.ask", "model.embed", "net.fetch", "records.create", "records.delete", "records.get", "records.list", "records.update",
     "settings.get", "speech.available", "speech.dictate", "storage.delete", "storage.get", "storage.keys", "storage.set",
     "tasks.complete", "tasks.create", "tasks.list", "ui.badge", "ui.limits", "ui.save", "ui.settings", "ui.toast", "ui.touch",
+    "web.read", "web.search",
   ]);
   assert.equal(Object.isFrozen(CALLS), true);
 });
@@ -283,6 +284,31 @@ test("net.fetch is allowed only for an https address on exactly a host the owner
   assert.equal(refusalFor("net.fetch", { url: "https://api.booking.example/" }, sandboxed())?.code, "not_allowed");
   assert.equal(refusalFor("net.fetch", {}, sandboxed())?.code, "not_allowed");
   assert.equal(httpsHost("https://Example.COM:8443/x"), "example.com");
+});
+
+test("a page reaches a host the owner gave the app, exactly that host over https, and no other", () => {
+  const mounted = readMount({ mount: "m".repeat(32), entry: "index.html", version: "1.0.0", tier: "sandboxed", permissions: ["net:api.booking.example"], owner_hosts: ["Blog.Example.org", "x y", 5, "../x"] });
+  assert.deepEqual(mounted?.grant, { tier: "sandboxed", permissions: ["net:api.booking.example"], ownerHosts: ["blog.example.org"] });
+  const grant = mounted?.grant ?? sandboxed();
+  assert.equal(refusalFor("net.fetch", { url: "https://blog.example.org/wp-json/" }, grant), null);
+  assert.equal(refusalFor("net.fetch", { url: "https://api.booking.example/v1" }, grant), null);
+  for (const url of ["http://blog.example.org/", "https://example.org/", "https://x.blog.example.org/", "https://blog.example.org.evil.example/"]) {
+    assert.equal(refusalFor("net.fetch", { url }, grant)?.code, "not_allowed", url);
+  }
+  // With none given, the grant reads as it always did and the host is refused.
+  const bare = readMount({ mount: "m".repeat(32), entry: "index.html", version: "1.0.0", tier: "sandboxed", permissions: [] });
+  assert.deepEqual(bare?.grant, { tier: "sandboxed", permissions: [] });
+  assert.equal(refusalFor("net.fetch", { url: "https://blog.example.org/" }, bare?.grant ?? sandboxed())?.code, "not_allowed");
+});
+
+test("the web, similarity and hosts calls need what the server needs and nothing more", () => {
+  assert.equal(refusalFor("web.search", { query: "x" }, sandboxed())?.code, "not_allowed");
+  assert.equal(refusalFor("web.read", { url: "https://example.org/" }, sandboxed("model.ask"))?.code, "not_allowed");
+  assert.equal(refusalFor("web.search", { query: "x" }, sandboxed("web")), null);
+  assert.equal(refusalFor("web.read", { url: "https://example.org/" }, sandboxed("web")), null);
+  assert.equal(refusalFor("model.embed", { texts: ["x"] }, sandboxed("web"))?.code, "not_allowed");
+  assert.equal(refusalFor("model.embed", { texts: ["x"] }, sandboxed("model.ask")), null);
+  assert.equal(refusalFor("hosts.list", {}, sandboxed()), null);
 });
 
 test("app.call belongs to full apps only", () => {

@@ -16,11 +16,12 @@ be installed as it is) or a warning.
 
 **dev** installs the folder, once the owner has agreed in the terminal, marks it
 "Development" (its files are served uncached), and then looks at the folder every second.
-When something changes it checks it again and installs the new copy over the old,
-keeping the app's data: the supervisor starts the new program, and its open pages load
-again. A change that asks for more than the owner agreed to stops the loop and says so:
-run ``apps dev`` again to be asked. Each new copy is recorded as the app being removed
-(its data kept) and installed again.
+When something changes it checks it again and puts the new copy in place the way an
+update does (``update.switch``), even under the same version number: its data, secrets,
+roles, device keys and everything else the owner gave it stay; the supervisor starts the
+new program, and its open pages load again. A change that asks for more than the owner
+agreed to stops the loop and says so: run ``apps dev`` again to be asked. Each new copy
+is recorded as an update (``apps.updated``), its data copied first like any other.
 """
 
 from __future__ import annotations
@@ -337,17 +338,14 @@ def install_copy(core: Core, folder: Path, *, replacing: mf.Manifest | None,
                  agree: Callable[[dict[str, Any]], str | None]) -> mf.Manifest:
     """Put the folder's current copy in place. The first time, ``agree(plan)`` asks the
     owner and answers the name they typed ("" for a plain yes) or None for no. After
-    that, a copy that asks for the same things replaces the last one, its data kept."""
+    that, a copy that asks for the same things replaces the last one (``replace_copy``)."""
     from jimmyhq.apps import install  # noqa: PLC0415
 
     m = mf.load(folder)
     if replacing is not None:
         if not same_consent(replacing, m):
-            raise ConsentNeeded(
-                "The app now asks for something you have not agreed to (its id, tier or "
-                "permissions changed), so the new copy was not put in place. Run \"jimmyhq "
-                "apps dev\" again to be asked.")
-        install.remove(core, m.id, keep_data=True)
+            raise _consent_needed()
+        return replace_copy(core, folder, m)
     plan = install.plan_folder(core, folder)
     typed: str | None = m.name
     if replacing is None:
@@ -358,6 +356,38 @@ def install_copy(core: Core, folder: Path, *, replacing: mf.Manifest | None,
     try:
         install.confirm(core, plan["plan"], plan["fingerprint"],
                         typed_name=typed if plan["needs_typed_name"] else None)
+    except BaseException:
+        install.cancel(core, plan["plan"])
+        raise
+    _mark(core, m.id, folder)
+    return m
+
+
+def _consent_needed() -> ConsentNeeded:
+    return ConsentNeeded(
+        "The app now asks for something you have not agreed to (its id, tier, permissions "
+        "or what its agent tools may do changed), so the new copy was not put in place. "
+        "Run \"jimmyhq apps dev\" again to be asked.")
+
+
+def replace_copy(core: Core, folder: Path, m: mf.Manifest) -> mf.Manifest:
+    """Rule ``a_dev_copy_is_an_update``: put a new copy of an app under development in
+    place as an update is (``update.confirm_update``), not by removing and installing it
+    again, so its secrets, roles, device keys, hosts, plugs and data all stay. It may keep
+    the version number it had. A copy whose files did not change is left as it is; one
+    that asks for anything the owner has not agreed to is refused, and nothing changes."""
+    from jimmyhq.apps import install, update  # noqa: PLC0415 - they import this package
+
+    row = store.need(core, m.id)
+    plan = update.plan_folder(core, m.id, folder, development=True)
+    if plan["update"]["needs_consent"] or plan["needs_typed_name"]:
+        install.cancel(core, plan["plan"])
+        raise _consent_needed()
+    if (plan["source"]["tree"], plan["app"]["version"]) == (row["tree"], row["version"]):
+        install.cancel(core, plan["plan"])
+        return m
+    try:
+        update.confirm_update(core, plan["plan"], plan["fingerprint"])
     except BaseException:
         install.cancel(core, plan["plan"])
         raise

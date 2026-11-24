@@ -11,7 +11,8 @@ each app not looked at for ``apps.update_check_hours``, asks:
 What it finds is kept in ``apps.db`` (working state, ``found``) and the Apps screen says
 "Update available". Nothing is installed unless the owner allows it: ``apps.auto_update``
 for every app, ``app.<id>.auto_update`` for one. Even then, a version that asks for a new
-permission, drops the ``private`` promise or changes tier waits for the owner.
+permission, drops the ``private`` promise, changes tier, or lets its agent tools do more
+(``permissions.tools_changed``) waits for the owner.
 
 **Updating is two calls, like installing.** ``plan_update`` fetches the new version into
 staging beside the old one, proves its files safe exactly as an install does, and
@@ -154,7 +155,10 @@ class _Granted:
     """What the owner agreed to for the version in use, in the shape ``permissions.diff``
     reads. What was granted, not what the old manifest asked for, is what counts."""
 
-    def __init__(self, row: dict[str, Any], private: bool, owner_hosts: Any = None):
+    def __init__(self, row: dict[str, Any], private: bool, owner_hosts: Any = None,
+                 feeds_: tuple[Any, ...] = (), feeds_held: tuple[str, ...] = (),
+                 tools: tuple[Any, ...] = (), roles: tuple[Any, ...] = (),
+                 roles_held: tuple[str, ...] = ()):
         self.id = row["app_id"]
         self.tier = row["tier"]
         self.permissions = tuple(row["permissions"])
@@ -162,15 +166,50 @@ class _Granted:
         # Like ``private``, a promise of the installed version's manifest, which the
         # owner's consent (its fingerprint) covers.
         self.owner_hosts = owner_hosts
+        # The feeds it offers now, and which of its feeds installed apps may read.
+        self.feeds = feeds_
+        self.feeds_held = feeds_held
+        # Its agent tools and roles now, and which of its roles some agent already holds.
+        self.tools = tools
+        self.roles = roles
+        self.roles_held = roles_held
+
+
+def roles_held(core: Core, app_id: str) -> tuple[str, ...]:
+    """The ids of this app's roles that some living agent holds now: the role filled, or
+    its capability (``app.<id>.<role>``) on the agent, even one left from an earlier
+    version and not yet tidied away."""
+    from jimmyhq.apps import roles  # noqa: PLC0415 - it imports this package
+    from jimmyhq.village import lens as vlens  # noqa: PLC0415
+
+    held = set(roles.held_by(roles.read(core), app_id))
+    prefix = f"app.{app_id}."
+    for row in vlens.read(core)["agents"].values():
+        if row.get("retired_ts") is None:
+            held |= {cap[len(prefix):] for cap in row["config"].get("capabilities") or ()
+                     if cap.startswith(prefix)}
+    return tuple(sorted(held))
+
+
+def feeds_held(core: Core, app_id: str) -> tuple[str, ...]:
+    """The names of this app's feeds that some other installed app holds a grant for."""
+    held = {feed for row in store.installed(core).values() if row["app_id"] != app_id
+            for producer, feed in perms.feeds(row.get("permissions") or ())
+            if producer == app_id}
+    return tuple(sorted(held))
 
 
 def granted_now(core: Core, row: dict[str, Any]) -> _Granted:
     try:
         installed = store.manifest_of(core, row["app_id"])
-        private, owner_hosts = installed.private, installed.owner_hosts
+        private, owner_hosts, offered = installed.private, installed.owner_hosts, \
+            installed.feeds
+        tools, roles_ = installed.tools, installed.roles
     except AppError:
-        private, owner_hosts = False, None
-    return _Granted(row, private, owner_hosts)
+        # Its files do not read: every feed and tool the new version offers counts as new.
+        private, owner_hosts, offered, tools, roles_ = False, None, (), (), ()
+    return _Granted(row, private, owner_hosts, offered, feeds_held(core, row["app_id"]),
+                    tools, roles_, roles_held(core, row["app_id"]))
 
 
 def needs_typed_name(row: dict[str, Any], m: mf.Manifest) -> bool:
@@ -459,7 +498,8 @@ def switch(core: Core, app_id: str, print_events: Any, *, restore: str | None = 
 
 
 def _plan_update(core: Core, plan_id: str, folder: Path, source: dict[str, Any], skipped: int,
-                 app_id: str, origin: Path | None = None) -> dict[str, Any]:
+                 app_id: str, origin: Path | None = None,
+                 development: bool = False) -> dict[str, Any]:
     row = store.need(core, app_id)
     tree = store.hash_tree(folder / "tree", store.limits(core))
     try:
@@ -469,7 +509,8 @@ def _plan_update(core: Core, plan_id: str, folder: Path, source: dict[str, Any],
         raise AppError(422, str(error)) from None
     check_same_app(row, m)
     install.check_records(m)
-    check_newer(row, m)
+    if not development:
+        check_newer(row, m)
     install.check_full_allowed(core, m.tier, source["kind"])
     change = perms.diff(granted_now(core, row), m)
     came_from = install.provenance(core, origin, source["kind"], tree.hash, m.id)
@@ -482,6 +523,8 @@ def _plan_update(core: Core, plan_id: str, folder: Path, source: dict[str, Any],
         "source": {**source, "tree": tree.hash, "files": tree.files, "bytes": tree.bytes,
                    "left_out": skipped},
         "reviewed": False, "provenance": came_from,
+        "origin": install.origin_name(came_from, source, origin, m.id),
+        "development": development,
         "review": install.review_sentence(came_from, reviewed=False),
         "warning": install.tier_warning(m.tier) if change.tier else None,
         "needs_typed_name": needs_typed_name(row, m),
@@ -515,8 +558,11 @@ def _staged(core: Core, work: Any) -> dict[str, Any]:
         raise
 
 
-def plan_folder(core: Core, app_id: str, folder: str | Path) -> dict[str, Any]:
-    """Stage a new version of an installed app from a folder on this computer."""
+def plan_folder(core: Core, app_id: str, folder: str | Path, *,
+                development: bool = False) -> dict[str, Any]:
+    """Stage a new version of an installed app from a folder on this computer.
+    ``development``: a new copy under ``apps dev`` (``dev.install_copy``), which may keep
+    the version number it had; confirmed only while the app is still marked so."""
     store.need(core, app_id)
     if not isinstance(folder, str | Path) or not str(folder).strip():
         raise AppError(422, "Give the folder to update from. Nothing was changed.")
@@ -526,7 +572,7 @@ def plan_folder(core: Core, app_id: str, folder: str | Path) -> dict[str, Any]:
         tree = store.copy_folder(source, staged / "tree", store.limits(core))
         return _plan_update(core, plan_id, staged,
                             {"kind": "folder", "repo": None, "commit": None, "ref": None},
-                            tree.left_out, app_id, origin=source)
+                            tree.left_out, app_id, origin=source, development=development)
     return _staged(core, work)
 
 
@@ -651,7 +697,16 @@ def confirm_update(core: Core, plan_id: str, fingerprint: str, *, typed_name: st
             raise AppError(422, (
                 f"Nothing was changed. This version of {m.name} becomes a full app, which "
                 f"runs as you: type its name, {m.name}, exactly, to show you mean it."))
-        check_newer(row, m)
+        if record.get("development"):
+            from jimmyhq.apps import dev  # noqa: PLC0415 - it imports this package
+            if not dev.is_development(core, app_id):
+                store.delete_tree(folder)
+                raise AppError(409, (
+                    "That copy was made for \"jimmyhq apps dev\", which no longer runs for "
+                    "this app. Nothing was changed. Update the app from the Apps screen, or "
+                    "run \"jimmyhq apps dev\" again."))
+        else:
+            check_newer(row, m)
         install.check_full_allowed(core, m.tier, source["kind"])
         try:
             mf.check_alongside(m, [x for x in store.manifests(core) if x.id != app_id])
@@ -704,7 +759,9 @@ def confirm_update(core: Core, plan_id: str, fingerprint: str, *, typed_name: st
                 store.delete_tree(environment.venv_dir(core, app_id, name))
             raise
         found_store(core).clear(app_id)
-        from jimmyhq.apps import owner_hosts  # noqa: PLC0415 - it imports this package
+        from jimmyhq.apps import inbound, owner_hosts  # noqa: PLC0415 - they import this package
+
+        inbound.on_updated(core, app_id, record.get("origin"))  # the same install, from here
 
         owner_hosts.drop_undeclared(core, app_id, actor=actor)  # only while still declared
         if actor != "system":  # by itself, a version keeps the storage it had
@@ -775,10 +832,11 @@ def began_after_update(row: dict[str, Any], status: dict[str, Any]) -> bool:
     return bool(starts) and failures >= len(starts)
 
 
-def crash_rollback(core: Core, app_id: str, status: dict[str, Any]) -> str | None:
+def crash_rollback(core: Core, app_id: str,
+                   status: dict[str, Any]) -> tuple[str, bool] | None:
     """Roll a crashing app back to the version before its update, when the crashing began
-    with that update and the version is kept. Returns the version gone back to, or None
-    when it was not rolled back."""
+    with that update and the version is kept. Returns the version gone back to and whether
+    its data was put back too, or None when it was not rolled back."""
     row = store.get(core, app_id)
     if row is None or not began_after_update(row, status):
         return None
@@ -797,7 +855,7 @@ def crash_rollback(core: Core, app_id: str, status: dict[str, Any]) -> str | Non
     except AppError as error:
         log.warning("could not roll %s back after it kept crashing: %s", app_id, error.detail)
         return None
-    return previous["version"]
+    return previous["version"], restore
 
 
 # --- looking for updates --------------------------------------------------------------------

@@ -489,6 +489,39 @@ def provenance(core: Core, origin: Path | None, kind: str, tree: str, app_id: st
     return BUNDLED
 
 
+def origin_name(provenance_: str, source: dict[str, Any], folder: Path | None,
+                app_id: str) -> str | None:
+    """Rule ``an_app_is_the_same_by_where_it_came_from``: the place one install came from,
+    by what JimmyHQ saw itself and never by what the manifest says: an app that ships with
+    JimmyHQ by its id, once its files proved byte for byte that example (``provenance``);
+    one from a git address by that address; one from a folder on this computer by the
+    folder's full path. None when there is nothing to tell it by. Two installs are the same
+    app when these are equal (``inbound.on_installed`` keeps a removed app's device keys
+    only then). Its limits: anyone who can push to that address, or write that folder, can
+    put another app there under the same id."""
+    if provenance_ == BUNDLED:
+        return f"example:{app_id}"
+    if source.get("kind") == GIT and source.get("repo"):
+        return f"git:{source['repo']}"
+    if source.get("kind") == FOLDER and folder is not None:
+        try:
+            return f"folder:{Path(folder).resolve().as_posix()}"
+        except (OSError, RuntimeError):
+            return None
+    return None
+
+
+def origin_of_row(core: Core, row: dict[str, Any]) -> str | None:
+    """``origin_name`` for an app installed before its origin was kept: from what the
+    record says, which tells an example and a git address apart but not a folder."""
+    if row.get("example") or (row.get("source") == FOLDER and row.get("tree")
+                              and bundled_tree(core, row["app_id"]) == row["tree"]):
+        return f"example:{row['app_id']}"
+    if row.get("source") == GIT and row.get("repo"):
+        return f"git:{row['repo']}"
+    return None
+
+
 def review_sentence(provenance_: str, reviewed: bool) -> str:
     if provenance_ == BUNDLED:
         return BUNDLED_REVIEW
@@ -517,6 +550,7 @@ def _plan(core: Core, plan_id: str, folder: Path, source: dict[str, Any],
         "source": {**source, "tree": tree.hash, "files": tree.files, "bytes": tree.bytes,
                    "left_out": skipped},
         "reviewed": False, "provenance": came_from,
+        "origin": origin_name(came_from, source, origin, m.id),
         "review": review_sentence(came_from, reviewed=False),
         "warning": tier_warning(m.tier),
         "needs_typed_name": m.tier == perms.FULL,
@@ -750,6 +784,11 @@ def confirm(core: Core, plan_id: str, fingerprint: str, *, typed_name: str | Non
             raise
         finally:
             store.delete_tree(folder)
+        from jimmyhq.apps import inbound  # noqa: PLC0415 - it imports this package
+
+        # Device keys kept when an app of this id was removed belong to that install: they
+        # stay only if this is the same app again (``origin_name``), the door still shut.
+        inbound.on_installed(core, m.id, record.get("origin"), actor=actor)
         storage_ask.grant(core, m, actor=actor)  # agreed to with the rest of the plan
         _publish(core)
         return detail(core, m.id)
@@ -843,21 +882,30 @@ def remove(core: Core, app_id: str, *, keep_data: bool | None = None,
         home = store.app_dir(core, app_id)
         from jimmyhq.apps import runtime, update  # noqa: PLC0415 - they import this module
 
-        if row.get("tier") == "full":
-            asked = runtime.pause(core, app_id)
-            try:
-                if not runtime.wait_stopped(core, app_id, asked):
-                    raise update.not_stopped(row["name"], "removed")
-            finally:
+        paused = row.get("tier") == "full"
+        removed = False
+        # The program stays out of run.json from here to the end: listed again, the
+        # supervisor would start it while its data is deleted. Only a removal that fails
+        # lists it again; one that succeeds drops the pause quietly
+        # (``runtime.forget_pause``), and the last ``_publish`` writes the list without it.
+        asked = runtime.pause(core, app_id) if paused else 0
+        try:
+            if paused and not runtime.wait_stopped(core, app_id, asked):
+                raise update.not_stopped(row["name"], "removed")
+            _close(core, app_id)
+            if not keep_data:
+                check_data_deleted(core, app_id, row["name"])
+            erased = update.erase_record(core, app_id) if erase_record else 0
+            core.tape.print("apps.removed", {
+                "app_id": app_id, "version": row["version"],
+                "data": "kept" if keep_data else "deleted", "tape_erased": bool(erase_record),
+            }, actor=actor, subject=kinds.subject(app_id))
+            removed = True
+        finally:
+            if paused and not removed:
                 runtime.resume(core, app_id)
-        _close(core, app_id)
-        if not keep_data:
-            check_data_deleted(core, app_id, row["name"])
-        erased = update.erase_record(core, app_id) if erase_record else 0
-        core.tape.print("apps.removed", {
-            "app_id": app_id, "version": row["version"],
-            "data": "kept" if keep_data else "deleted", "tape_erased": bool(erase_record),
-        }, actor=actor, subject=kinds.subject(app_id))
+            elif paused:
+                runtime.forget_pause(app_id)
         for name in core.secrets.names():
             if name.startswith(f"app.{app_id}."):
                 core.secrets.delete(name)
@@ -873,7 +921,8 @@ def remove(core: Core, app_id: str, *, keep_data: bool | None = None,
         counts.forget(core, app_id)  # the number it said waits on the owner
         from jimmyhq.apps import inbound  # noqa: PLC0415
 
-        inbound.on_removed(core, app_id, keep_data=keep_data)  # its device keys
+        inbound.on_removed(core, app_id, keep_data=keep_data,  # its device keys
+                           origin=origin_of_row(core, row))
         # --- roles: no capability, charter or open work of the app is left behind ---
         try:
             from jimmyhq.apps import roles  # noqa: PLC0415

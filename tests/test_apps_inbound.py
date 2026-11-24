@@ -675,6 +675,114 @@ def test_removing_an_app_with_its_data_leaves_neither_keys_nor_an_open_door_to_i
     assert send(device, key).status_code == 401
 
 
+def key_removals(core) -> list[dict]:
+    return [e.payload for e in core.tape.after(0, limit=100000)
+            if e.kind == "apps.inbound_key_removed"]
+
+
+def test_a_different_app_installed_under_the_same_id_starts_with_none_of_the_kept_keys(
+        owner, device, core, tmp_path):
+    mine = full_app(tmp_path / "mine", "house", permissions=["inbound"], inbound=EVENTS)
+    install_folder(core, mine)
+    key = make_key(owner)
+    made = owner.get("/api/apps/house/inbound").json()["keys"][0]
+    assert send(device, key).status_code == 202
+    install.remove(core, "house", keep_data=True)
+    # Another app's author picked the same id, name and manifest: only where it came from
+    # tells them apart, and that is not his to say.
+    theirs = full_app(tmp_path / "theirs", "house", permissions=["inbound"], inbound=EVENTS)
+    install_folder(core, theirs)
+    after = owner.get("/api/apps/house/inbound").json()
+    assert after["keys"] == [] and after["open"] is False
+    assert (after["received"], after["recent"]) == (0, [])
+    owner.put("/api/apps/house/inbound/open", json={"open": True})
+    assert send(device, key).status_code == 401
+    assert key_removals(core) == [{"app_id": "house", "key_id": made["id"],
+                                   "label": "Home hub"}]
+    install.remove(core, "house", keep_data=True)
+    install_folder(core, mine)  # gone for good: the first app back does not bring them
+    assert owner.get("/api/apps/house/inbound").json()["keys"] == []
+    assert send(device, key).status_code == 401
+
+
+def test_an_updated_app_is_still_the_same_app_when_it_is_installed_again_from_its_new_place(
+        owner, device, core, tmp_path):
+    install_folder(core, full_app(tmp_path / "first", "house", permissions=["inbound"],
+                                  inbound=EVENTS))
+    key = make_key(owner)
+    newer = full_app(tmp_path / "newer", "house", permissions=["inbound"], inbound=EVENTS,
+                     version="1.1.0")
+    plan = update.plan_folder(core, "house", newer)
+    update.confirm_update(core, plan["plan"], plan["fingerprint"])
+    assert len(owner.get("/api/apps/house/inbound").json()["keys"]) == 1
+    install.remove(core, "house", keep_data=True)
+    install_folder(core, newer)
+    after = owner.get("/api/apps/house/inbound").json()
+    assert len(after["keys"]) == 1 and after["open"] is False
+    owner.put("/api/apps/house/inbound/open", json={"open": True})
+    assert send(device, key).status_code == 202 and key_removals(core) == []
+
+
+def test_where_an_install_came_from_is_what_jimmyhq_saw_never_what_its_manifest_says(tmp_path):
+    folder = {"kind": "folder", "repo": None}
+    one, two = (tmp_path / "one", tmp_path / "two")
+    assert install.origin_name("folder", folder, one, "house") != install.origin_name(
+        "folder", folder, two, "house")
+    assert install.origin_name("folder", folder, one, "house") == install.origin_name(
+        "folder", folder, tmp_path / "x" / ".." / "one", "house")
+    git = {"kind": "git", "repo": "https://example.org/house.git"}
+    assert install.origin_name("git", git, None, "house") == "git:https://example.org/house.git"
+    assert install.origin_name("bundled", folder, one, "house") == "example:house"
+    assert install.origin_name("folder", folder, None, "house") is None
+
+
+@pytest.mark.parametrize("kept, now, stays", [
+    ("git:https://example.org/house.git", "git:https://example.org/house.git", True),
+    ("git:https://example.org/house.git", "git:https://example.org/other.git", False),
+    ("example:house", "example:house", True),
+    (None, "folder:/srv/apps/house", False),  # an old folder install cannot be told apart
+    ("example:house", None, False),
+])
+def test_keys_kept_by_an_install_made_before_origins_were_kept_go_back_only_to_the_same_app(
+        core, kept, now, stays):
+    store = inbound.service(core).store
+    assert store.add_key("house", "Hub", "0" * 64, 5, 1800000000000)
+    with store._lock:  # noqa: SLF001 - as a file from before version 6 has it
+        store._db.execute("UPDATE inbound_apps SET origin=NULL")  # noqa: SLF001
+    inbound.on_removed(core, "house", keep_data=True, origin=kept)
+    inbound.on_installed(core, "house", now, actor="owner")
+    assert (len(store.keys("house")) == 1) is stays and store.app("house")["open"] is False
+    assert store.origin("house") == now
+
+
+def test_a_version_5_apps_db_gains_the_install_origin_and_keeps_its_keys(tmp_path):
+    path = tmp_path / "apps.db"
+    conn = sqlite3.connect(path)
+    conn.executescript(dbfile.STORE.schema)
+    for step in dbfile.STORE.steps[:4]:
+        storeversion.run_script(conn, step)
+    conn.execute("INSERT INTO inbound_keys (id, app_id, label, digest, created) VALUES "
+                 "('k1', 'alpha', 'Hub', ?, 1800000000000)", ("0" * 64,))
+    conn.execute("INSERT INTO inbound_apps (app_id, open) VALUES ('alpha', 1)")
+    conn.commit()
+    conn.execute("PRAGMA user_version = 5")
+    conn.close()
+
+    opened = inbound.Store(path)
+    try:
+        assert [k["label"] for k in opened.keys("alpha")] == ["Hub"]
+        assert opened.app("alpha")["open"] is True and opened.origin("alpha") is None
+        opened.set_origin("alpha", "example:alpha")
+        assert opened.origin("alpha") == "example:alpha"
+    finally:
+        opened.close()
+    conn = sqlite3.connect(path)
+    try:
+        assert storeversion.version_of(conn) == dbfile.STORE.latest >= 6
+    finally:
+        conn.close()
+
+
 # --- the manifest and the program ---------------------------------------------------------------
 
 

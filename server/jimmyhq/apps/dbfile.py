@@ -13,7 +13,8 @@ schema version for all of them.
   owner (the count beside the app in the sidebar). Added at version 2.
 - ``inbound.py``: ``inbound_keys``, ``inbound_apps`` and ``inbound_receipts``, messages
   from the owner's devices. Added at version 3; at version 4 a key may say it is for a
-  sender that can only be given an address (``in_address``).
+  sender that can only be given an address (``in_address``); at version 6 each app's row
+  says where its install came from (``origin``).
 
 What can be made again and what cannot: ``kind_schemas`` and ``inbox`` cannot (an app's
 declared kinds are read from the file, not from the app, once it is gone; a delivery
@@ -196,7 +197,14 @@ _OWNER_ERROR_STEP = """
 ALTER TABLE inbox ADD COLUMN owner_error TEXT;
 """
 
+# Version 6: where the install of each app came from (``install.origin_name``), so device keys
+# kept when an app was removed go back only to the same app installed again. A file made
+# before has none: such an app's origin is read from its record when it is removed.
+_ORIGIN_STEP = """
+ALTER TABLE inbound_apps ADD COLUMN origin TEXT;
+"""
+
 STORE = storeversion.declare(
     "apps", _INBOX + _KINDS + _MOUNTS + _QUOTAS + _PLUGS + _UPDATES,
     files=(f"apps/{FILE_NAME}",),
-    steps=(_COUNTS_STEP, _INBOUND_STEP, _ADDRESS_KEY_STEP, _OWNER_ERROR_STEP))
+    steps=(_COUNTS_STEP, _INBOUND_STEP, _ADDRESS_KEY_STEP, _OWNER_ERROR_STEP, _ORIGIN_STEP))

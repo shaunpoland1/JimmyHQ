@@ -38,6 +38,26 @@ RUNS_AS_YOU = "always.full"
 PRIVATE_OFF = "private.off"
 # The line for a manifest's ``owner_hosts``: never written in ``permissions``.
 OWNER_HOSTS = "owner_hosts"
+# Shown only by ``diff``, when an update changes what one of the app's own feeds carries.
+FEED_OFFERED = "feed.offered"
+# Shown only by ``diff``, when an update offers a new agent tool or guards one less.
+TOOL_OFFERED = "tool.offered"
+# Shown only by ``diff``, when an update gives agents in one of its roles more tools.
+ROLE_TOOLS = "role.tools"
+
+# How closely the ladder guards each effect a tool declares (``plugs.tools``): a "read"
+# runs whenever asked; a "record" too, but cannot reach outside the app while it runs;
+# a change waits for the owner unless he lets an agent use it alone; the rest wait for
+# him every time. An update that moves a tool lower asks again.
+EFFECT_GUARD = {"read": 0, "record": 1, "create": 2, "update": 2, "change": 2,
+                "send": 3, "spend": 3, "delete": 3, "access": 3}
+_EFFECT_WORDS = {
+    0: "runs whenever an agent that has it asks, without your yes",
+    1: "runs whenever an agent that has it asks, without your yes, and only writes into "
+       "the app's own records",
+    2: "changes things, and waits for your yes until you let an agent use it on its own",
+    3: "waits for your yes every time",
+}
 
 
 class PermissionRefused(ValueError):
@@ -362,6 +382,10 @@ def _line(grant: Grant) -> Line:
 def _order(line: Line) -> tuple[int, str]:
     if line.permission == OWNER_HOSTS:
         return (_RANK["net"], "\uffff")  # just after the hosts the manifest names
+    if line.permission == FEED_OFFERED:
+        return (_RANK["feed"], "\uffff" + (line.host or ""))  # after the feeds it reads
+    if line.permission in (TOOL_OFFERED, ROLE_TOOLS):  # with the tools it offers agents
+        return (_RANK["agents.tools"], f"{line.permission}:{line.host or ''}")
     return (_RANK.get(line.permission, -1), line.host or "")
 
 
@@ -489,20 +513,111 @@ def diff(old: Asks, new: Asks) -> Diff:
             and before[OWNER_HOSTS].sentence != after[OWNER_HOSTS].sentence:
         # Another purpose, or more hosts: asked again, in the new words.
         widened += (after[OWNER_HOSTS],)
-    tier = (old.tier, new.tier) if old.tier != new.tier else None
+    widened += feeds_changed(old, new)
+    widened += tools_changed(old, new)
+    tier =(old.tier, new.tier) if old.tier != new.tier else None
     return Diff(added=added, widened=widened, removed=removed, tier=tier)
+
+
+def feeds_changed(old: Any, new: Any) -> tuple[Line, ...]:
+    """Rule ``a_feed_changes_only_with_consent``: what a reading app gets from this app's
+    feeds changes only when the owner agrees. A feed that now carries another kind of the
+    app's events is asked again, and so is a new feed that an installed app already holds
+    a grant for (``old.feeds_held``: the names of this app's feeds that some installed app
+    may read), since that app would start reading it at once. A feed removed, or a new one
+    nobody may read yet, asks nothing: a reader is asked when it is granted."""
+    before = {f.name: f.kind for f in getattr(old, "feeds", ()) or ()}
+    held = set(getattr(old, "feeds_held", ()) or ())
+    out: list[Line] = []
+    for feed in getattr(new, "feeds", ()) or ():
+        if feed.name in before and before[feed.name] != feed.kind:
+            sentence = (f"Change what its feed \"{feed.label}\" carries, from its "
+                        f"\"{before[feed.name]}\" events to its \"{feed.kind}\" events. "
+                        "Apps you let read it will read the new ones.")
+        elif feed.name not in before and feed.name in held:
+            sentence = (f"Offer the feed \"{feed.label}\", which apps you already let read "
+                        f"it will start reading: {feed.description}")
+        else:
+            continue
+        out.append(Line(id=f"{FEED_OFFERED}:{feed.name}", permission=FEED_OFFERED,
+                        host=feed.name, sentence=sentence))
+    return tuple(out)
+
+
+def effect_guard(effect: str) -> int:
+    """How closely the ladder guards a tool of this effect, higher for closer. An effect
+    JimmyHQ does not know counts as a change, as the ladder counts it."""
+    return EFFECT_GUARD.get(effect, EFFECT_GUARD["change"])
+
+
+def _tool_full_name(manifest: Any, name: str) -> str:
+    return f"app_{manifest.id}_{name}"
+
+
+def tools_changed(old: Any, new: Any) -> tuple[Line, ...]:
+    """Rule ``a_tool_is_guarded_less_only_with_consent``: what agents may do through the
+    app's tools changes only when the owner agrees. Asked again: a tool the installed
+    version did not offer (an agent given the whole app gets it at once); a tool moved to
+    an effect the ladder guards less (``effect_guard``: "send" to "read", say); and a role
+    that offers more tools than before, or a new role that an agent already holds
+    (``old.roles_held``: role ids some agent has the capability of). A tool removed or
+    guarded more, or a role that offers fewer tools, asks nothing."""
+    before = {t.name: t.effect for t in getattr(old, "tools", ()) or ()}
+    out: list[Line] = []
+    for tool in getattr(new, "tools", ()) or ():
+        full = _tool_full_name(new, tool.name)
+        words = _EFFECT_WORDS[effect_guard(tool.effect)]
+        if tool.name not in before:
+            sentence = (f"Offer your agents a new tool, \"{full}\" (\"{tool.effect}\"): it "
+                        f"{words}.")
+        elif effect_guard(tool.effect) < effect_guard(before[tool.name]):
+            sentence = (f"Let its tool \"{full}\" do \"{tool.effect}\" instead of "
+                        f"\"{before[tool.name]}\": it then {words}.")
+        else:
+            continue
+        out.append(Line(id=f"{TOOL_OFFERED}:{tool.name}", permission=TOOL_OFFERED,
+                        host=tool.name, sentence=sentence))
+    had = {r.id: set(r.tools) for r in getattr(old, "roles", ()) or ()}
+    held = set(getattr(old, "roles_held", ()) or ())
+    for role in getattr(new, "roles", ()) or ():
+        if role.id in had:
+            more = [t for t in role.tools if t not in had[role.id]]
+            who = "Agents who hold that role get them at once."
+        elif role.id in held:
+            more = list(role.tools)
+            who = "An agent of yours already holds that role, and gets them at once."
+        else:
+            continue
+        if not more:
+            continue
+        names = ", ".join(f"\"{_tool_full_name(new, t)}\"" for t in more)
+        out.append(Line(id=f"{ROLE_TOOLS}:{role.id}", permission=ROLE_TOOLS, host=role.id,
+                        sentence=(f"Give its role \"{role.label}\" more tools: {names}. "
+                                  f"{who}")))
+    return tuple(out)
 
 
 def fingerprint(manifest: Asks) -> str:
     """A stable mark of what the owner is asked to agree to: the app, its tier, its
-    permissions and its ``private`` promise. Two manifests with the same mark need no new
-    consent; the order permissions are written in does not matter."""
+    permissions, its ``private`` promise, the name and kind of each feed it offers
+    (what other apps it lets read get), the name and effect of each agent tool, and the
+    tools each role offers. Two manifests with the same mark need no new consent; the
+    order anything is written in does not matter."""
     parts: dict[str, Any] = {
         "v": 1, "id": manifest.id, "tier": manifest.tier,
         "private": bool(manifest.private), "permissions": sorted(set(manifest.permissions))}
     asked = getattr(manifest, "owner_hosts", None)
     if asked is not None:  # only when declared, so no other app's mark changes
         parts["owner_hosts"] = {"purpose": asked.purpose, "max": asked.max}
+    offered = getattr(manifest, "feeds", ()) or ()
+    if offered:  # the same: an app that offers no feed keeps the mark it had
+        parts["feeds"] = sorted([f.name, f.kind] for f in offered)
+    tools = getattr(manifest, "tools", ()) or ()
+    if tools:  # the same: an app that offers agents no tool keeps the mark it had
+        parts["tools"] = sorted([t.name, t.effect] for t in tools)
+    roles = getattr(manifest, "roles", ()) or ()
+    if roles:
+        parts["roles"] = sorted([r.id, sorted(set(r.tools))] for r in roles)
     text = json.dumps(parts, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
     return hashlib.sha256(text.encode("ascii")).hexdigest()
 

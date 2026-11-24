@@ -228,6 +228,20 @@ class Store:
         with self._lock:
             self._db.execute("UPDATE inbound_apps SET open=0 WHERE app_id=?", (app_id,))
 
+    def origin(self, app_id: str) -> str | None:
+        """Where the install these keys were made for came from, if known."""
+        with self._lock:
+            row = self._db.execute("SELECT origin FROM inbound_apps WHERE app_id=?",
+                                   (app_id,)).fetchone()
+        return None if row is None else row["origin"]
+
+    def set_origin(self, app_id: str, origin: str | None, *, only_if_unknown: bool = False) -> None:
+        keep = " WHERE inbound_apps.origin IS NULL" if only_if_unknown else ""
+        with self._lock:
+            self._db.execute(
+                "INSERT INTO inbound_apps (app_id, origin) VALUES (?, ?) ON CONFLICT (app_id) "
+                f"DO UPDATE SET origin=excluded.origin{keep}", (app_id, origin))
+
     def forget(self, app_id: str) -> None:
         with self._lock, self._tx():
             for table in ("inbound_keys", "inbound_apps", "inbound_receipts"):
@@ -617,17 +631,46 @@ def set_open(core: Core, app_id: str, is_open: Any, *, actor: str) -> dict[str, 
     return state(core, app_id)
 
 
-def on_removed(core: Core, app_id: str, *, keep_data: bool) -> None:
+def on_removed(core: Core, app_id: str, *, keep_data: bool, origin: str | None = None) -> None:
     """An app was removed. With its data deleted, its keys, counts and receipts go too. With
     its data kept, its keys stay but the door is switched off, so installing the app again
-    does not open it without the owner's click."""
+    does not open it without the owner's click. ``origin`` is where the install came from as
+    its record tells it, kept only for an install made before its origin was kept."""
     store = service(core).store
     if keep_data:
         store.close_app(app_id)
+        if store.keys(app_id):
+            store.set_origin(app_id, origin, only_if_unknown=True)
     else:
         store.forget(app_id)
 
 
+def on_installed(core: Core, app_id: str, origin: str | None, *, actor: str) -> None:
+    """Rule ``inbound_keys_are_the_installs``: an app was installed under an id whose device
+    keys were kept when an app of that id was removed. They stay, the door still shut, only
+    when this is the same app again: it came from the same place (``install.origin_name``).
+    A different app, or one whose origin cannot be told, starts with no keys: each kept key
+    is removed for good, on the record as the owner removing a key is, and the old counts
+    and receipts go with them."""
+    store = service(core).store
+    if origin is None or store.origin(app_id) != origin:
+        for key in store.keys(app_id):
+            label = store.remove_key(app_id, key["id"])
+            if label is not None:
+                core.tape.print("apps.inbound_key_removed", {
+                    "app_id": app_id, "key_id": key["id"], "label": label},
+                    actor=actor, subject=kinds.subject(app_id))
+        store.forget(app_id)
+    store.set_origin(app_id, origin)
+
+
+def on_updated(core: Core, app_id: str, origin: str | None) -> None:
+    """An update is the same install, wherever the owner took it from: its keys stay, and
+    from now on it is told by where this version came from."""
+    if origin is not None:
+        service(core).store.set_origin(app_id, origin)
+
+
 __all__ = ["ADDRESS_MARK", "PREFIX", "Admitted", "address_paths", "admit", "handled",
-           "largest_kb", "make_key", "on_removed", "queue", "remove_key", "sender_query",
-           "service", "set_open", "state"]
+           "largest_kb", "make_key", "on_installed", "on_removed", "on_updated", "queue",
+           "remove_key", "sender_query", "service", "set_open", "state"]

@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 import dataclasses
 import json
+import threading
 
 import httpx
 import pytest
@@ -547,6 +548,54 @@ def test_a_port_jimmyhq_listens_on_here_is_never_reached_on_this_computer(
     assert network.transport.seen == []
 
 
+@pytest.fixture
+def fence_elsewhere(core):
+    """An agent's browser fence as the village process runs it: listening on loopback, in
+    front of a site it would let a browser reach, on a port this process does not know of.
+    Its own event loop runs in a thread, as the village's does in its own process."""
+    from jimmyhq.browser.fence import Fence, FenceProxy  # noqa: PLC0415
+    from test_browser_fakes import Site  # noqa: PLC0415
+
+    loop = asyncio.new_event_loop()
+    runner = threading.Thread(target=loop.run_forever, daemon=True)
+    runner.start()
+
+    def run(coro):
+        return asyncio.run_coroutine_threadsafe(coro, loop).result(10)
+
+    site = Site({"/": (200, {}, "the fence let this through")})
+    run(site.__aenter__())
+    proxy = FenceProxy(Fence(core, also_allow=[("127.0.0.1", site.port)]))
+    run(proxy.start())
+    safety.stopped_listening_here(proxy.port)  # another process: its port is not known here
+    yield proxy.port, site
+    run(proxy.stop())
+    run(site.__aexit__())
+    loop.call_soon_threadsafe(loop.stop)
+    runner.join(5)
+
+
+@pytest.mark.parametrize("method", ["GET", "POST", "PUT", "PATCH", "DELETE"])
+def test_an_agents_browser_fence_lets_nothing_an_app_sends_it_through(
+        web, bare, core, imagery, network, fence_elsewhere, method):
+    """The fence of an agent's browser runs in the village process, so the web process
+    cannot refuse its port, and the owner could add ``localhost`` with it. Even then an app
+    reaches nothing through it: ``net.fetch`` sends a plain request (``GET /path``) and
+    never ``CONNECT``, and the fence forwards only what a browser sends a proxy (a full
+    ``http://`` address, or ``CONNECT``), answering anything else 400 and sending nothing."""
+    port, site = fence_elsewhere
+    network.transport = None  # a real connection, on loopback only
+    assert add(web, f"http://localhost:{port}").status_code == 200
+    behind = f"127.0.0.1:{site.port}"
+    for path in ("/", f"/http://{behind}/", f"//{behind}/", f"/?http://{behind}/"):
+        got = program(bare, core).ok("net.fetch", {"url": f"http://localhost:{port}{path}",
+                                                   "method": method, "body": "x"})
+        # The fence itself answered, and said no.
+        assert got["status"] == 400, (path, got)
+        assert "Only http and https addresses are fetched." in got["text"]
+    assert site.seen == []
+
+
 # --- every form of a metadata address ------------------------------------------------------------
 
 
@@ -681,3 +730,21 @@ def test_an_app_has_only_so_many_fetches_open_at_once_and_a_finished_one_frees_i
     assert fetch(bare, core, f"http://{SERVER}:22/")["ok"] is False
     assert fetch(bare, core, f"{ORIGIN}/missing")["ok"] is True  # a 404 is an answer
     assert bridge._FETCHING == {}  # noqa: SLF001 - every one, done or refused, let go
+
+
+def test_a_granted_host_on_the_owners_network_is_reached_only_once_he_adds_it_here(
+        web, bare, core, tmp_path, network):
+    install_full(core, tmp_path / "webby", "webby", permissions=["net:sneaky.example.com"])
+    network.transport.pages[("sneaky.example.com", "/v1/images")] = httpx.Response(
+        200, json={"data": [3]})
+    core.settings.set("lookup.allow_private_hosts", ["sneaky.example.com"], actor="owner")
+    error = fetch(bare, core, "https://sneaky.example.com/v1/images", "webby")["error"]
+    assert error["code"] == "not_allowed" and "Addresses on your own network" in error["message"]
+    assert network.transport.seen == []
+    assert add(web, "https://sneaky.example.com", "webby").status_code == 200
+    got = fetch(bare, core, "https://sneaky.example.com/v1/images", "webby")
+    assert got["ok"] is True and json.loads(got["result"]["text"]) == {"data": [3]}
+    assert network.transport.seen == [(HOME, "sneaky.example.com", "/v1/images")]
+    network.resolver.table["sneaky.example.com"] = [private(192, 168, 1, 99)]
+    moved = fetch(bare, core, "https://sneaky.example.com/v1/images", "webby")["error"]
+    assert moved["code"] == "not_allowed" and len(network.transport.seen) == 1

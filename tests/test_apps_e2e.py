@@ -228,7 +228,7 @@ def test_a_mounted_apps_page_and_bridge_script_carry_exactly_the_designed_header
     # The two things an app is told about the owner, and nothing else about them.
     assert (made["timezone"], made["week_start"]) == ("", "monday")
     assert set(made) == {"mount", "base", "entry", "app", "name", "version", "tier",
-                         "permissions", "local_addresses", "development", "api",
+                         "permissions", "local_addresses", "owner_hosts", "development", "api",
                          "timezone", "week_start",
                          "upload_max_mb", "thumbnail_px", "picture_px", "picture_max_mb",
                          "pictures_per_minute", "dictate_max_s", "private",

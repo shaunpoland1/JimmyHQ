@@ -71,7 +71,10 @@ what was checked. The rules, each with its own tests in `tests/test_lookup_safet
 address, nothing else) skips rule 5 and only rule 5. Use it for an internal wiki or a
 documentation server. Whatever those hosts serve becomes readable by any model with web
 lookup on, so leave it empty unless you mean it. Rule 8 still applies: an allowed host is
-never read on JimmyHQ's own port.
+never read on JimmyHQ's own port. The exception is web lookup's alone: an app's
+`net.fetch` never takes it, even for a host the app was granted; an app reaches an address
+on your own network only through "Addresses on your own network" on its page (see
+[Apps](apps.md#addresses-on-the-owners-own-network)).
 
 ### What is read
 

@@ -455,7 +455,12 @@ def test_an_update_that_crashes_from_the_start_is_rolled_back_when_the_owner_cho
     assert event.payload["data_restored"] is True
     assert (store.data_dir(core, shaky) / "app.db").read_text(encoding="utf-8") == "before"
     assert events(core, "apps.held_back")[0].payload["then"] == "rolled_back"
-    assert "went back to 1.0.0" in told(core)[0]["title"]
+    card = told(core)[0]
+    assert "went back to 1.0.0" in card["title"]
+    card = bench.get_card(core, card["id"])
+    assert "Its data went back to the copy taken before the update" in card["body"]
+    assert "left as it is" not in card["body"]
+    assert "kept as a backup" in card["body"] and "until" in card["body"]
 
 
 def test_going_back_after_crashing_leaves_the_data_alone_when_the_owner_switched_that_off(
@@ -466,6 +471,8 @@ def test_going_back_after_crashing_leaves_the_data_alone_when_the_owner_switched
     crashes.notice(core)
     assert store.get(core, shaky)["version"] == "1.0.0"
     assert events(core, "apps.rolled_back")[0].payload["data_restored"] is False
+    body = bench.get_card(core, told(core)[0]["id"])["body"]
+    assert "Its data was left as it is" in body and "went back to the copy" not in body
 
 
 def test_an_update_that_ran_steadily_before_crashing_is_held_back_not_rolled_back(core, shaky):

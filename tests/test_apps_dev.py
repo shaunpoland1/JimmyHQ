@@ -14,8 +14,10 @@ from pathlib import Path
 import pytest
 
 from apps_install_helpers import install_folder
+from apps_roles_helpers import agent, caps, kinds_printed, roles_folder
 from jimmyhq import cli
-from jimmyhq.apps import bridge, dev, install, plugs, store
+from jimmyhq.apps import bridge, dev, inbound, install, plugs, roles, store, update
+from jimmyhq.apps.store import AppError
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "sdk" / "python"))
@@ -190,6 +192,71 @@ def test_dev_keeps_the_apps_data_across_a_new_copy(core, tmp_path):
     dev.install_copy(core, folder, replacing=m, agree=no)
     assert (store.data_dir(core, "plant_care") / "kept.txt").read_text(
         encoding="utf-8") == "still here"
+
+
+def typed(plan):
+    return plan["app"]["name"]
+
+
+@pytest.fixture
+def developed(core, tmp_path):
+    """A full app under ``apps dev`` with a secret typed in, a role filled and a device
+    key made, as the owner leaves it between two saves."""
+    folder = roles_folder(tmp_path, permissions=("agents.tools", "inbound"),
+                          inbound=[{"name": "event", "label": "Home events"}])
+    m = dev.install_copy(core, folder, replacing=None, agree=typed)
+    core.secrets.set("app.posts.api_key", "typed in by the owner")
+    agent(core, "agent-a")
+    roles.fill(core, "posts", "writer", "agent-a")
+    inbound.make_key(core, "posts", "Home hub", actor="owner")
+    return folder, m
+
+
+def test_a_new_copy_under_dev_keeps_the_apps_secrets_roles_and_device_keys(core, developed):
+    folder, m = developed
+    (folder / "roles" / "writer.md").write_text("# Writer\n\nShorter.\n", encoding="utf-8")
+    dev.install_copy(core, folder, replacing=m, agree=no)
+    assert "app.posts.api_key" in core.secrets.names()
+    assert roles.holder(core, "posts", "writer").agent_id == "agent-a"
+    assert "app.posts.writer" in caps(core, "agent-a")
+    kept = inbound.state(core, "posts")
+    assert [k["label"] for k in kept["keys"]] == ["Home hub"] and kept["open"] is True
+
+
+def test_a_new_copy_under_dev_is_recorded_as_an_update_not_a_removal(core, developed):
+    folder, m = developed
+    before = store.get(core, "posts")["tree"]
+    (folder / "posts_main" / "__init__.py").write_text("# changed\n", encoding="utf-8")
+    dev.install_copy(core, folder, replacing=m, agree=no)
+    assert kinds_printed(core, "apps.removed") == []
+    [updated] = kinds_printed(core, "apps.updated")
+    assert updated.payload["from_version"] == updated.payload["version"] == "1.0.0"
+    assert store.get(core, "posts")["tree"] == updated.payload["tree"] != before
+
+
+def test_a_copy_that_changed_nothing_is_left_as_it_is(core, developed):
+    folder, m = developed
+    dev.install_copy(core, folder, replacing=m, agree=no)
+    assert kinds_printed(core, "apps.updated") == kinds_printed(core, "apps.removed") == []
+
+
+def test_a_development_copy_cannot_go_in_once_the_app_is_no_longer_developed(core, developed):
+    folder, _m = developed
+    (folder / "posts_main" / "__init__.py").write_text("# changed\n", encoding="utf-8")
+    plan = update.plan_folder(core, "posts", folder, development=True)
+    dev._mark(core, "posts", None)  # noqa: SLF001 - the loop ended meanwhile
+    with pytest.raises(AppError) as refused:
+        update.confirm_update(core, plan["plan"], plan["fingerprint"])
+    assert refused.value.status == 409 and "Nothing was changed" in refused.value.detail
+    assert kinds_printed(core, "apps.updated") == []
+
+
+def test_outside_development_a_copy_of_the_same_version_is_still_not_an_update(
+        core, developed):
+    folder, _m = developed
+    (folder / "posts_main" / "__init__.py").write_text("# changed\n", encoding="utf-8")
+    with pytest.raises(AppError, match="not an update"):
+        update.plan_folder(core, "posts", folder)
 
 
 def test_dev_stops_rather_than_grant_a_permission_nobody_agreed_to(core, tmp_path):

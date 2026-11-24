@@ -272,7 +272,8 @@ def test_a_folder_on_the_way_that_is_a_link_sends_nothing(core, water, server, t
     assert error.code == "not_allowed" and server == []
 
 
-@pytest.mark.parametrize("name", ["app.db", "app.db-wal"])
+@pytest.mark.parametrize("name", ["app.db", "app.db-wal", "App.db", "APP.DB-WAL",
+                                  "App.Db-Shm"])
 def test_the_cores_own_store_of_the_apps_values_is_never_sent_as_a_file(
         core, water, server, name):
     appdata.open_data(core, "water").set("k", "v")

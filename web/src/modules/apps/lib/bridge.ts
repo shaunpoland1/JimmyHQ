@@ -88,8 +88,10 @@ export type Tier = "sandboxed" | "full";
  * What the owner agreed to for one app. It comes from the installed list, never from the
  * frame. `ownNetwork` lists the addresses on the owner's own network he let this app reach,
  * as `scheme://host:port` (set only when there are any); it is never passed to the frame.
+ * `ownerHosts` lists the hosts he gave the app himself on its page (set only when there are
+ * any): `net.fetch` may reach them over https exactly as it reaches a `net:` host.
  */
-export type Grant = { tier: Tier; permissions: readonly string[]; ownNetwork?: readonly string[] };
+export type Grant = { tier: Tier; permissions: readonly string[]; ownNetwork?: readonly string[]; ownerHosts?: readonly string[] };
 
 type CallRule = {
   /** The permission the call needs; `net` means any `net:<host>`. */
@@ -119,8 +121,13 @@ export const CALLS: Readonly<Record<string, CallRule>> = Object.freeze({
   "bench.file": { needs: "bench.file" },
   "settings.get": {},
   "model.ask": { needs: "model.ask" },
+  "model.embed": { needs: "model.ask" },
   "memory.recall": { needs: "memory.recall" },
+  "web.search": { needs: "web" },
+  "web.read": { needs: "web" },
   "net.fetch": { needs: "net" },
+  // The hosts the owner gave this app himself: no permission, and nothing can be added by it.
+  "hosts.list": {},
   "app.call": { full: true },
   "ui.toast": { shell: true },
   "ui.badge": { shell: true },
@@ -355,7 +362,11 @@ export function refusalFor(call: string, args: unknown, grant: Grant): BridgeErr
   if (rule.needs !== "net") {
     return grant.permissions.includes(rule.needs) ? null : refuse("not_allowed", REFUSALS.needsPermission(call, rule.needs));
   }
-  const hosts = grant.permissions.filter((permission) => permission.startsWith("net:")).map((permission) => permission.slice(4).toLowerCase());
+  // The hosts the owner agreed to at install, and those he gave the app himself since.
+  const hosts = [
+    ...grant.permissions.filter((permission) => permission.startsWith("net:")).map((permission) => permission.slice(4).toLowerCase()),
+    ...(grant.ownerHosts ?? []),
+  ];
   const url = isPlainObject(args) ? args.url : undefined;
   // Exactly an address on the owner's own network he let this app reach (the server checks it again).
   const origin = originOf(url);
@@ -635,6 +646,16 @@ function localOf(raw: unknown): { ownNetwork?: string[] } {
   return listed.length > 0 ? { ownNetwork: listed } : {};
 }
 
+const OWNER_HOST = /^[a-z0-9][a-z0-9.\-]{0,252}$/;
+
+/** The hosts the owner gave the app, from the mount answer, as `{ownerHosts}` only when there are any. */
+function ownerHostsOf(raw: unknown): { ownerHosts?: string[] } {
+  const listed = Array.isArray(raw)
+    ? raw.filter((item): item is string => typeof item === "string").map((item) => item.toLowerCase()).filter((item) => OWNER_HOST.test(item)).slice(0, 16)
+    : [];
+  return listed.length > 0 ? { ownerHosts: listed } : {};
+}
+
 /** Reads the mount answer, or null when it is not one the frame can be opened from. */
 export function readMount(raw: unknown): Mounted | null {
   if (!isPlainObject(raw)) return null;
@@ -646,7 +667,7 @@ export function readMount(raw: unknown): Mounted | null {
   return {
     src,
     version: typeof raw.version === "string" ? raw.version.slice(0, 40) : "",
-    grant: { tier: raw.tier === "full" ? "full" : "sandboxed", permissions, ...localOf(raw.local_addresses) },
+    grant: { tier: raw.tier === "full" ? "full" : "sandboxed", permissions, ...localOf(raw.local_addresses), ...ownerHostsOf(raw.owner_hosts) },
     timezone: zone,
     weekStart: week,
     uploadMaxBytes:

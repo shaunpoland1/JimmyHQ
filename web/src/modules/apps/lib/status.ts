@@ -155,7 +155,7 @@ export function keptLine(app: { id: string; tier?: string; data_dir?: string | n
 }
 
 /** What happens to a full app's keys for the owner's devices when it is removed with its data kept. */
-export const DOOR_KEPT = "If it takes messages from your devices, its keys are kept; its door will be off until you switch it on again.";
+export const DOOR_KEPT = "If it takes messages from your devices, its keys are kept for this same app; its door will be off until you switch it on again. A different app installed under the same name gets none of them.";
 
 /** And when the owner deletes a full app's data. */
 export const DOOR_ERASED = "Any keys it gave your devices are deleted, so they stop working.";

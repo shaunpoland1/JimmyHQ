@@ -4,7 +4,10 @@ owner's consent and nothing wider.
 **Offering.** A full app declares its feeds in its manifest (``feeds``): a name, one of
 its own kinds of event (short, so always ``app.<id>.<kind>``), a plain label and one
 sentence on what is in it. Its items are the events of that kind it prints itself
-(``tape.print``). There is nothing more to do: the record is the feed.
+(``tape.print``). There is nothing more to do: the record is the feed. Each feed's name
+and kind are part of the producer's consent (``permissions.fingerprint``): an update that
+changes a feed's kind, or adds one an installed app already may read, asks the owner again
+(``permissions.feeds_changed``).
 
 **Reading.** Another full app asks for ``feed:<app>.<feed>``, one feed of one app, which
 the owner grants like any other permission. Its program then calls

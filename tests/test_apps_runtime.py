@@ -17,7 +17,7 @@ import pytest
 
 from apps_full_helpers import client_for, full_app, install_full
 from apps_install_helpers import example, install_folder
-from jimmyhq.apps import inbox, install, runtime, store
+from jimmyhq.apps import inbox, install, runtime, store, update
 
 PATIENCE_S = 60.0
 
@@ -108,6 +108,75 @@ def test_only_switched_on_full_apps_are_listed_to_run(core, tmp_path):
     install.remove(core, "alpha")
     listed = json.loads(runtime.run_file(core.config.data).read_text(encoding="utf-8"))
     assert listed["apps"] == []
+
+
+def listed_now(core) -> list[str]:
+    found = json.loads(runtime.run_file(core.config.data).read_text(encoding="utf-8"))
+    return [a["id"] for a in found["apps"]]
+
+
+def record_run_lists(monkeypatch) -> list[list[str]]:
+    """Every list of programs written to ``run.json`` from now on, in order."""
+    written: list[list[str]] = []
+    real = runtime.write_json
+
+    def recorded(path, value):
+        if Path(path).name == runtime.RUN_FILE:
+            written.append([a["id"] for a in value["apps"]])
+        real(path, value)
+    monkeypatch.setattr(runtime, "write_json", recorded)
+    return written
+
+
+def test_removing_a_full_app_never_lists_its_program_to_run_again_once_it_is_paused(
+        core, tmp_path, monkeypatch):
+    install_full(core, tmp_path, "alpha")
+    install_full(core, tmp_path, "beta")
+    written = record_run_lists(monkeypatch)
+    install.remove(core, "alpha", keep_data=False)
+    assert written and written[0] == ["beta"]  # the pause: the supervisor stops it
+    assert all("alpha" not in listed for listed in written)
+    assert listed_now(core) == ["beta"]
+
+
+def test_a_supervisor_reading_the_list_during_a_removal_does_not_make_the_deleted_data_again(
+        core, tmp_path, monkeypatch):
+    install_full(core, tmp_path, "alpha")
+    data_of(core, "alpha").mkdir(parents=True, exist_ok=True)
+    (data_of(core, "alpha") / "notes.txt").write_text("mine", encoding="utf-8")
+    real_erase = update.erase_record
+
+    def slow_erase(core_, app_id):
+        # A long Tape: meanwhile the supervisor starts what run.json lists, and a program
+        # makes its data folder as it starts.
+        if app_id in listed_now(core_):
+            data_of(core_, app_id).mkdir(parents=True, exist_ok=True)
+        return real_erase(core_, app_id)
+    monkeypatch.setattr(update, "erase_record", slow_erase)
+    done = install.remove(core, "alpha", keep_data=False)
+    assert done["data"] == "deleted"
+    assert not data_of(core, "alpha").exists()
+    assert not store.app_dir(core, "alpha").exists()
+
+
+def test_a_removal_that_fails_lists_the_program_to_run_again(core, tmp_path, monkeypatch):
+    install_full(core, tmp_path, "alpha")
+
+    def cannot(core_, app_id, name):
+        raise store.AppError(500, "could not delete")
+    monkeypatch.setattr(install, "check_data_deleted", cannot)
+    with pytest.raises(store.AppError):
+        install.remove(core, "alpha", keep_data=False)
+    assert store.get(core, "alpha") is not None
+    assert listed_now(core) == ["alpha"]
+
+
+def test_an_app_removed_and_installed_again_under_the_same_id_is_listed_to_run(core, tmp_path):
+    folder = full_app(tmp_path, "alpha")
+    install_folder(core, folder)
+    install.remove(core, "alpha")
+    install_folder(core, folder)
+    assert listed_now(core) == ["alpha"]
 
 
 def test_the_owners_restart_raises_the_generation_and_nothing_else(core, probe):

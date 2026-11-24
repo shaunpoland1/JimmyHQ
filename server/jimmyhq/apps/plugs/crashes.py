@@ -52,7 +52,7 @@ def tells_owner(core: Core) -> bool:
 
 
 def card_words(name: str, exits: int, then: str = "held",
-               version: str | None = None) -> dict[str, str]:
+               version: str | None = None, restored: bool = False) -> dict[str, str]:
     stopped = (f"{name}'s program stopped {exits} times in a row, each time soon after it "
                "started, so JimmyHQ stopped starting it.")
     if then == "switched_off":
@@ -64,13 +64,19 @@ def card_words(name: str, exits: int, then: str = "held",
                      "shows what it printed. Switch it on there when you are ready."),
         }
     if then == "rolled_back":
+        data = ("Its data went back to the copy taken before the update. What the new "
+                "version wrote is kept as a backup, and Roll back on its page can bring it "
+                "back until a later update or roll back makes JimmyHQ delete the older "
+                "versions it keeps."
+                if restored else
+                "Its data was left as it is; the copy taken before the update is kept, "
+                "and Roll back on its page can put it back.")
         return {
             "title": f"{name} kept crashing after its update, so it went back to {version}",
             "summary": "You chose to have a crashing update rolled back.",
             "body": (f"{stopped} The crashing began with its latest update, so, as you chose "
-                     f"in Settings, Apps, it went back to version {version}. Its data was "
-                     "left as it is; the copy taken before the update is kept, and Roll "
-                     "back on its page can put it back. Its log shows what it printed."),
+                     f"in Settings, Apps, it went back to version {version}. {data} Its log "
+                     "shows what it printed."),
         }
     return {
         "title": f"{name} kept crashing, so it was stopped",
@@ -82,22 +88,24 @@ def card_words(name: str, exits: int, then: str = "held",
     }
 
 
-def act(core: Core, app_id: str, status: dict[str, Any]) -> tuple[str, str | None]:
+def act(core: Core, app_id: str,
+        status: dict[str, Any]) -> tuple[str, str | None, bool]:
     """Carry out the owner's choice for a program held back. Returns what was done
-    ("held", "switched_off" or "rolled_back") and the version gone back to."""
+    ("held", "switched_off" or "rolled_back"), the version gone back to, and whether
+    its data was put back too."""
     choice = core.settings.get("apps.crash_loop")
     if choice == "switch_off":
         from jimmyhq.apps import install  # noqa: PLC0415 - it imports this package
 
         install.disable(core, app_id, actor="system", reason="crashing")
-        return "switched_off", None
+        return "switched_off", None, False
     if choice == "roll_back":
         from jimmyhq.apps import update  # noqa: PLC0415
 
-        version = update.crash_rollback(core, app_id, status)
-        if version is not None:
-            return "rolled_back", version
-    return "held", None
+        went = update.crash_rollback(core, app_id, status)
+        if went is not None:
+            return "rolled_back", went[0], went[1]
+    return "held", None, False
 
 
 def notice(core: Core, *, now: int | None = None) -> list[str]:
@@ -117,10 +125,10 @@ def notice(core: Core, *, now: int | None = None) -> list[str]:
         last_code = (status.get("last_exit") or {}).get("code")
         tell = tells_owner(core)
         try:
-            then, version = act(core, app_id, status)
+            then, version, restored = act(core, app_id, status)
         except Exception:  # noqa: BLE001 - it stays held back, and the owner is told
             log.exception("apps: acting on %s's crash loop failed", app_id)
-            then, version = "held", None
+            then, version, restored = "held", None, False
         core.tape.print("apps.held_back", {
             "app_id": app_id, "version": row["version"], "exits": exits,
             "last_code": last_code if isinstance(last_code, int) else None, "told": tell,
@@ -129,7 +137,7 @@ def notice(core: Core, *, now: int | None = None) -> list[str]:
         if tell:
             bench.file_card(core, filed_by="system", kind=CARD_KIND, source="Apps",
                             lane="done", subject=f"app:{app_id}",
-                            **card_words(row["name"], exits, then, version))
+                            **card_words(row["name"], exits, then, version, restored))
         told.append(app_id)
     return told
 

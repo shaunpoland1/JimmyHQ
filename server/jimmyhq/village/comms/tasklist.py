@@ -156,10 +156,22 @@ def items(v, agent_id: str) -> list[Item]:
         status = "done" if done else "set aside" if ref in parked else \
             "current" if ref == current else "open"
         note = {"owner": f" ({name} asked in chat)", "own": " (your own task)"}.get(source, "")
-        if str(t.get("filed_by") or "").startswith("app:") and t.get("notes") and not done:
-            note += f" ({t['notes']})"  # work an app gave out: who gave it, and its details
-        out.append(Item(ref, t["title"] + note, status, source, t["id"], t["title"]))
+        filed_by = str(t.get("filed_by") or "")
+        title = t["title"]
+        if filed_by.startswith("app:"):
+            title = app_title(filed_by.removeprefix("app:"), title)
+            if t.get("notes") and not done:
+                note += f" ({t['notes']})"  # work an app gave out: who gave it, and its details
+        out.append(Item(ref, title + note, status, source, t["id"], title))
     return out
+
+
+def app_title(app_id: str, title: str) -> str:
+    """Rule ``app_titles_are_marked``: a title an app wrote is the app's words, wherever an
+    agent or a coworker reads it. Who gave it comes first, then the title in quotes it
+    cannot close, on one line, so it cannot pass as the owner's request or a new line."""
+    said = " ".join(str(title).split()).replace('"', "'")
+    return f'work for the app {app_id}: "{said}"'
 
 
 def find(v, agent_id: str, ref: object) -> Item | None:

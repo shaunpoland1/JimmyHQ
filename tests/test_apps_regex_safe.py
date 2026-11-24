@@ -84,12 +84,18 @@ for extra in %(extra)s:
 slow = []
 for label, fn in CALLS:
     for name, text in HOSTILE.items():
-        start = time.perf_counter()
-        try:
-            fn(text)
-        except Exception:
-            pass  # a refusal of the text is fine: only the time is checked here
-        took = time.perf_counter() - start
+        # The best of three: a busy machine can make one run slow, but a function whose
+        # time grows with the square of the text is slow every time.
+        took = float("inf")
+        for _ in range(3):
+            start = time.perf_counter()
+            try:
+                fn(text)
+            except Exception:
+                pass  # a refusal of the text is fine: only the time is checked here
+            took = min(took, time.perf_counter() - start)
+            if took <= %(each)s:
+                break
         if took > %(each)s:
             slow.append(f"{label} on {name}: {took:.1f}s")
 print("\\n".join(slow))

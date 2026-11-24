@@ -241,6 +241,23 @@ def test_the_owner_adds_his_own_site_and_the_app_reaches_it_like_a_manifest_host
     assert any(line["id"] == "owner_hosts" for line in detail["lines"])
 
 
+def test_the_mount_answer_carries_the_hosts_the_owner_gave_so_the_page_may_reach_them(
+        web, core, tmp_path, internet):
+    from jimmyhq.apps import files  # noqa: PLC0415
+
+    folder = full_app(tmp_path, "drafty", owner_hosts=ASKED, secrets=PER_HOST,
+                      screens=[{"id": "main", "label": "Drafts", "entry": "index.html"}])
+    (folder / "index.html").write_text("<p>hi</p>", encoding="utf-8")
+    install_folder(core, folder)
+    assert files.mint_mount(core, "drafty")["owner_hosts"] == []
+    add(web, SITE)
+    add(web, OTHER)
+    assert files.mint_mount(core, "drafty")["owner_hosts"] == [SITE, OTHER]
+    assert web.post("/api/apps/drafty/mount").json()["owner_hosts"] == [SITE, OTHER]
+    web.delete(f"/api/apps/drafty/hosts/{SITE}")
+    assert files.mint_mount(core, "drafty")["owner_hosts"] == [OTHER]
+
+
 def test_an_owner_host_gives_the_exact_host_only_and_never_a_neighbour(
         web, bare, core, drafty, internet):
     add(web, SITE)

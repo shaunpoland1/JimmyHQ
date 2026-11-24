@@ -46,7 +46,7 @@ owner's consent and held to what they agreed to).
 | `hands.db` | Integrations: the run ledger, requests waiting for a yes with their arguments, each account's reference at its provider | No. Has a real delete. |
 | `apps/<id>/versions/` | An installed app's files, exactly as they were consented to | Yes, by installing it again |
 | `apps/<id>/data/` | An app's own values and records (`app.db`). Kept when the app is removed unless the owner says otherwise | No. Never on the Tape. Has a real delete. |
-| `apps/apps.db` | The apps platform's database: the app inbox (work waiting for an app), the event kinds full apps declared (kept after an app is removed so what it wrote can be read), open mounts, quota counts, found updates, plug bookkeeping, the number each full app last said waits on the owner | No. The inbox and the declared kinds cannot be made again; the rest is working state that comes back by itself (quota counts start again). |
+| `apps/apps.db` | The apps platform's database: the app inbox (work waiting for an app), the event kinds full apps declared (kept after an app is removed so what it wrote can be read), open mounts, quota counts, found updates, plug bookkeeping, the number each full app last said waits on the owner, device keys and where each app's install came from | No. The inbox, the declared kinds and the device keys cannot be made again; the rest is working state that comes back by itself (quota counts start again). |
 | `auth.db` | The owner's password hash, sessions, API tokens, door clients, nodes | No |
 | `secrets.json` | Keys for outside services, owner-only | No |
 | `metrics.db` | Heartbeats and job runs | Yes |

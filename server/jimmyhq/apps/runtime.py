@@ -45,7 +45,9 @@ is a miss at start-up, never a crash: it is not counted towards holding the app 
 
 **Stopping one to change its version.** ``pause`` leaves an app out of ``run.json`` while
 its version is changed (``update``), and ``wait_stopped`` waits until the supervisor says
-its program has gone. ``resume`` lists it again.
+its program has gone. ``resume`` lists it again. Removing an app pauses it the same way
+and never resumes it unless the removal fails: ``forget_pause`` drops the pause without
+listing it, so its program is not started again while its files and data are deleted.
 
 **Output.** Everything the program prints goes to ``<logs>/app-<id>.log``, started afresh
 (the old one kept as ``.1``) when it grows past 5 MB.
@@ -643,6 +645,15 @@ def resume(core: Core, app_id: str) -> None:
     with _publish_lock:
         _paused.discard(app_id)
     publish(core)
+
+
+def forget_pause(app_id: str) -> None:
+    """Rule ``a_removed_app_is_not_listed_again``: once an app is removed, drop its pause
+    without writing ``run.json``. It is no longer installed, so the next ``publish``
+    leaves it out anyway; listing it again in between would start its program while its
+    files and data are being deleted."""
+    with _publish_lock:
+        _paused.discard(app_id)
 
 
 def stopped(found: dict[str, Any], app_id: str, asked: int, *, now: int) -> bool:
