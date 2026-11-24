@@ -1,0 +1,13 @@
+{
+  "jimmyhq_settings": 1,
+  "name": "Private by default",
+  "description": "Everything stays on your own machines unless you say otherwise: new conversations are local and off the record, models cannot title them, and memory is never embedded, mined or shown to a hosted model.",
+  "settings": {
+    "chat.local_only": true,
+    "chat.on_record": false,
+    "chat.model_titles": false,
+    "chat.memory_to_hosted": false,
+    "memory.embed_local_only": true,
+    "memory.mine_local_only": true
+  }
+}

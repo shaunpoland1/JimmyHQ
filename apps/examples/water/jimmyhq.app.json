@@ -1,0 +1,17 @@
+{
+  "manifest": 1,
+  "id": "water",
+  "name": "Water",
+  "summary": "Count glasses of water.",
+  "author": "The JimmyHQ project",
+  "licence": "Apache-2.0",
+  "version": "1.0.0",
+  "tier": "sandboxed",
+  "api": "1.0",
+  "permissions": ["tasks.write"],
+  "screens": [{"id": "main", "label": "Water", "entry": "index.html"}],
+  "settings": [
+    {"key": "goal", "type": "int", "default": 8, "min": 1, "max": 30,
+     "label": "Glasses a day", "help": "Your daily goal."}
+  ]
+}

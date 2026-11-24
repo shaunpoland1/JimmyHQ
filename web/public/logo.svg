@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 720" role="img" aria-label="JimmyHQ">
+  <style>
+    .lobe { fill: #284B63; }
+    .stem { fill: #153243; }
+    @media (prefers-color-scheme: dark) {
+      .lobe { fill: #F4F9E9; opacity: 0.7; }
+      .stem { fill: #F4F9E9; }
+    }
+  </style>
+  <path class="lobe" d="M133 455H270C320 455 358 480 378 518C345 570 290 600 210 598C165 572 135 520 133 455Z" />
+  <path class="stem" d="M468 118H598V420C598 560 480 632 340 630C290 629 245 618 210 598C300 600 370 560 392 500C404 470 408 440 408 410V178C408 145 435 118 468 118Z" />
+</svg>

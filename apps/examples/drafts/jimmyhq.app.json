@@ -1,0 +1,19 @@
+{
+  "manifest": 1,
+  "id": "drafts",
+  "name": "Drafts",
+  "summary": "Draft a short post on a schedule and put it on your Bench.",
+  "author": "The JimmyHQ project",
+  "licence": "Apache-2.0",
+  "version": "0.1.0",
+  "tier": "full",
+  "api": "1.0",
+  "permissions": ["bench.file", "model.ask", "jobs"],
+  "screens": [{"id": "board", "label": "Drafts", "entry": "web/index.html"}],
+  "settings": [
+    {"key": "draft_minutes", "type": "int", "default": 60, "min": 5,
+     "label": "Draft every (minutes)", "help": "How often to draft."}
+  ],
+  "server": {"entry": "drafts.main:app", "python": ">=3.12"},
+  "cards": [{"kind": "draft", "label": "Post draft"}]
+}

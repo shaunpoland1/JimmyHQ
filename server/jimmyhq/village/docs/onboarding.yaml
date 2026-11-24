@@ -1,0 +1,19 @@
+# What every new agent starts with, so its sense of purpose has something real to fill it
+# before any work has been asked of it. One task per item, in this order.
+#   id:     a short name, unique in this file
+#   title:  what the agent reads on its list
+#   needs:  optional. "coworkers" seeds the task only when another agent already lives here.
+tasks:
+  - id: look-around
+    title: "Look around your files folder and try each kind of file action once."
+  - id: first-diary
+    title: "Write your first diary entry about your first day."
+  - id: read-village-docs
+    title: "Read the village docs in your files (the village/ folder)."
+  - id: follow-a-curiosity
+    title: "Pick something you're curious about, think it through, and keep notes in your files."
+  - id: make-something
+    title: "Make something small of your own in your files: anything at all."
+  - id: meet-coworkers
+    title: "Meet your coworker(s) in the break room."
+    needs: coworkers

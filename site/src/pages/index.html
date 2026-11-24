@@ -1,0 +1,229 @@
+<!--
+title: JimmyHQ: bring the model you want, put it to work on what you need done
+description: An open-source headquarters that runs on your own computer. Bring the models you want, give each role its model, and agents and apps put them to work. Every decision waits for your click and goes on one record.
+class: page home
+-->
+<section class="hero" aria-labelledby="hero-h">
+  <p class="label">Open source · runs on your computer · early</p>
+  <h1 id="hero-h"><span>Bring the model you want.</span> <span>Put it to work on what you need done.</span></h1>
+  <p class="lede">JimmyHQ runs on your own computer and opens in your browser. Bring a model on your machine, through {{providers:local}}, or a hosted one from {{providers:hosted}} with your own key. Give each role the model you choose, and JimmyHQ's agents and apps put them to work. When something is ready to go out, it waits on the Bench for your click.</p>
+  <div class="actions">
+    <a class="btn btn-primary" href="/get-started.html">Get started</a>
+    <a class="btn" href="{{repo}}" rel="noopener">Read the code on GitHub</a>
+    <a class="btn btn-ghost" href="/tour.html">Take the tour</a>
+  </div>
+  <p class="hero-meta"><span><span class="dot dot-warn" aria-hidden="true"></span>Early development</span><span>v{{version}}</span><span>Apache-2.0</span><span>macOS, Linux and Windows</span></p>
+
+  <figure class="demo" aria-labelledby="demo-cap" data-demo>
+    <div class="demo-frame">
+      <div class="demo-head">
+        <span class="title">Bench</span>
+        <span class="lanes" aria-label="Lanes">
+          <span class="lane on">Needs you <span class="count" data-count="needs">3</span></span>
+          <span class="lane">Done for you <span class="count">0</span></span>
+          <span class="lane">Waiting <span class="count" data-count="waiting">0</span></span>
+        </span>
+        <span class="demo-hint" data-hint hidden>The buttons work. Nothing leaves this page.</span>
+      </div>
+      <div class="demo-body">
+        <div class="cards-col">
+          <p class="cards-sum" data-sum><b data-count="needs">3</b> in this lane · scout 1 · moss 1 · app:posts 1</p>
+          <ul class="cards">
+            <li><button type="button" class="card-row" data-card="0" aria-current="true">
+              <span class="row-top"><span class="tile" data-tone="0" aria-hidden="true">S</span><b>scout</b><span class="kind">· village.finding</span><span class="age">4m</span></span>
+              <span class="row-title">Three quotes for the boiler service</span>
+            </button></li>
+            <li><button type="button" class="card-row" data-card="1">
+              <span class="row-top"><span class="tile" aria-hidden="true">A</span><b>app:posts</b><span class="kind">· app.posts.draft</span><span class="age">22m</span></span>
+              <span class="row-title">Post draft: the library's winter opening hours</span>
+            </button></li>
+            <li><button type="button" class="card-row" data-card="2">
+              <span class="row-top"><span class="tile" data-tone="2" aria-hidden="true">M</span><b>moss</b><span class="kind">· village.work</span><span class="age">46m</span></span>
+              <span class="row-title">Send this week's reading list to the newsletter</span>
+            </button></li>
+          </ul>
+        </div>
+
+        <div class="pane-col">
+          <article class="pane" data-pane="0" aria-label="Card: Three quotes for the boiler service">
+            <h3>Three quotes for the boiler service</h3>
+            <p class="pane-meta"><span class="tag">Village</span><span class="pill warn">village.finding</span><span class="by">filed by <span class="tile" data-tone="0" aria-hidden="true">S</span><b>scout</b></span><span>· 4 minutes ago</span></p>
+            <p class="label">What it says</p>
+            <p>I searched the web for engineers who service this boiler and found three with openings next week. Their prices and reviews are in the note. I have not contacted anyone.</p>
+            <p class="label">Why it matters</p>
+            <p class="why">The service is due before the end of the month, and two of the three have no openings after that.</p>
+            <div class="actions" data-actions><button type="button" class="btn btn-approve">Approve</button><button type="button" class="btn">Not yet</button><button type="button" class="btn btn-no">No</button></div>
+          </article>
+          <article class="pane" data-pane="1" aria-label="Card: Post draft: the library's winter opening hours" hidden>
+            <h3>Post draft: the library's winter opening hours</h3>
+            <p class="pane-meta"><span class="tag">Posts</span><span class="pill">app.posts.draft</span><span class="by">filed by <span class="tile" aria-hidden="true">A</span><b>app:posts</b></span><span>· 22 minutes ago</span></p>
+            <p class="label">What it says</p>
+            <p>From December the library opens at ten on weekdays and closes at four on Saturdays. Written from the library's own notice and checked against it.</p>
+            <p class="label">Why it matters</p>
+            <p class="why">The new hours start on Monday. Nothing is booked until you approve.</p>
+            <div class="actions" data-actions><button type="button" class="btn btn-approve">Approve</button><button type="button" class="btn">Not yet</button><button type="button" class="btn btn-no">No</button></div>
+          </article>
+          <article class="pane" data-pane="2" aria-label="Card: Send this week's reading list to the newsletter" hidden>
+            <h3>Send this week's reading list to the newsletter</h3>
+            <p class="pane-meta"><span class="tag">Village</span><span class="pill">village.work</span><span class="by">filed by <span class="tile" data-tone="2" aria-hidden="true">M</span><b>moss</b></span><span>· 46 minutes ago</span></p>
+            <p class="label">What it says</p>
+            <p>Seven articles from your Reader topics, with one line on each. The draft is ready in the mailbox you connected.</p>
+            <p class="label">Why it matters</p>
+            <p class="why">Sending leaves the building, so it waits for you.</p>
+            <div class="actions" data-actions><button type="button" class="btn btn-approve">Approve</button><button type="button" class="btn">Not yet</button><button type="button" class="btn btn-no">No</button></div>
+          </article>
+          <div class="empty" data-empty hidden>
+            <span class="ring"><svg aria-hidden="true"><use href="#i-check"/></svg></span>
+            <h3>Nothing needs you</h3>
+            <p>Empty means done.</p>
+            <button type="button" class="btn btn-sm" data-reset>Put the cards back</button>
+          </div>
+        </div>
+
+        <aside class="tape" aria-label="The Tape">
+          <div class="tape-head"><span class="label">Tape</span><span class="live"><span class="dot dot-ok" aria-hidden="true"></span>live</span></div>
+          <ol class="events" data-events>
+            <li class="ev"><svg aria-hidden="true"><use href="#i-chev"/></svg><time data-ago="240">09:41:07</time><span class="chip">bench.filed</span><span class="who">agent:scout</span></li>
+            <li class="ev"><svg aria-hidden="true"><use href="#i-chev"/></svg><time data-ago="246">09:41:01</time><span class="chip">model.called</span><span class="who">agent:scout</span></li>
+            <li class="ev"><svg aria-hidden="true"><use href="#i-chev"/></svg><time data-ago="281">09:40:26</time><span class="chip">lookup.searched</span><span class="who">agent:scout</span></li>
+            <li class="ev"><svg aria-hidden="true"><use href="#i-chev"/></svg><time data-ago="1320">09:22:48</time><span class="chip">bench.filed</span><span class="who">app:posts</span></li>
+            <li class="ev"><svg aria-hidden="true"><use href="#i-chev"/></svg><time data-ago="1904">09:13:04</time><span class="chip">task.completed</span><span class="who">owner</span></li>
+            <li class="ev"><svg aria-hidden="true"><use href="#i-chev"/></svg><time data-ago="2760">08:58:48</time><span class="chip">bench.filed</span><span class="who">agent:moss</span></li>
+            <li class="ev"><svg aria-hidden="true"><use href="#i-chev"/></svg><time data-ago="3604">08:44:44</time><span class="chip">memory.mined</span><span class="who">system</span></li>
+            <li class="ev"><svg aria-hidden="true"><use href="#i-chev"/></svg><time data-ago="24000">03:01:07</time><span class="chip">backup.test_passed</span><span class="who">system</span></li>
+            <li class="ev"><svg aria-hidden="true"><use href="#i-chev"/></svg><time data-ago="26300">02:22:47</time><span class="chip">village.slept</span><span class="who">agent:scout</span></li>
+          </ol>
+          <p class="sr-only" aria-live="polite" data-said></p>
+        </aside>
+      </div>
+    </div>
+    <figcaption id="demo-cap">A drawing of the Bench and the Tape, made in this page with example data. The cards, the kinds and the layout follow the app; the names are made up.</figcaption>
+  </figure>
+</section>
+
+<section class="sec" aria-labelledby="models-h">
+  <div class="models">
+    <div>
+      <p class="label">Bring your own models</p>
+      <h2 id="models-h">You choose the model for each job.</h2>
+      <p class="lede">JimmyHQ does not come with a model or an account of its own. You add the ones you want, and give each of the {{role_count}} roles a first choice and fallbacks. Every part of JimmyHQ asks for a role, and no model name is written into the code.</p>
+      <div class="where">
+        <div class="panel"><p class="label">On your machine</p><p>Any server that speaks the OpenAI-compatible API, such as {{providers:local}}. Or a second computer of yours, with a graphics card, that lends its models.</p></div>
+        <div class="panel"><p class="label">Hosted, with your own key</p><p>{{providers:hosted}}. Your own model is used first, and the screen says when a hosted one answers.</p></div>
+      </div>
+    </div>
+    <div>
+      {{roles}}
+      <p class="roles-note">The roles as the Models screen lists them. A role you leave empty uses the default role's models, except embeddings.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="ideas-h">
+  <div class="sec-head">
+    <p class="label">What makes it different</p>
+    <h2 id="ideas-h">Four ideas the code holds to.</h2>
+  </div>
+  <div class="ideas">
+    <article class="idea panel">
+      <p class="label">Local first</p>
+      <h3>Your data is one folder on your machine.</h3>
+      <p>JimmyHQ listens on your own computer only, unless you open it to a private network. Everything it keeps is in one data folder, outside the code. Once you choose where, it backs that folder up on a schedule and tests each backup.</p>
+      <div class="art">
+        <ul class="files" aria-label="Some of what the data folder holds">
+          <li><span class="f">tape.db</span><span class="d">the record of every decision</span></li>
+          <li><span class="f">memory/</span><span class="d">notes you can read and edit</span></li>
+          <li><span class="f">vault/</span><span class="d">large content, by its hash</span></li>
+          <li><span class="f">apps/</span><span class="d">each app's files and data</span></li>
+          <li><span class="f">secrets.json</span><span class="d">your keys, owner-only</span></li>
+        </ul>
+      </div>
+    </article>
+    <article class="idea panel">
+      <p class="label">One owner</p>
+      <h3>It has one owner, and that is you.</h3>
+      <p>No team accounts and no account with us. You sign in with a password stored as a hash. Tokens you make for other tools are readers or writers, never the owner, and you can revoke any of them.</p>
+      <div class="art">
+        <div class="tokens" aria-label="An example list of tokens">
+          <div><span class="dot dot-ok" aria-hidden="true"></span><span class="t-name">Owner</span><span class="t-who">you, by password</span></div>
+          <div><span class="dot" aria-hidden="true"></span><span class="t-name">Wall display</span><span class="t-who">reader</span></div>
+          <div><span class="dot" aria-hidden="true"></span><span class="t-name">Shortcut on my phone</span><span class="t-who">writer</span></div>
+        </div>
+      </div>
+    </article>
+    <article class="idea panel">
+      <p class="label">The Bench</p>
+      <h3>Agents bring decisions to you.</h3>
+      <p>Sending, posting, paying and deleting wait for your click unless you have allowed that one action. Only your own click records a decision: a token, an agent or an app never decides.</p>
+      <div class="art">
+        <div class="mini-card" aria-hidden="true">
+          <span class="row-top"><span class="tile" data-tone="1">W</span><b>wren</b><span class="kind">· village.work</span><span class="age">2m</span></span>
+          <span class="row-title">Reply to the plumber with the Tuesday slot</span>
+          <span class="actions"><span class="btn btn-sm btn-approve">Approve</span><span class="btn btn-sm">Not yet</span><span class="btn btn-sm btn-no">No</span></span>
+        </div>
+      </div>
+    </article>
+    <article class="idea panel">
+      <p class="label">Apps in a sandbox</p>
+      <h3>An app does only what you agreed to.</h3>
+      <p>A sandboxed app is a page in a locked frame, with no network of its own. You read what it may do before you install, in these words. A full app runs as you, and the dialog sets that apart as a warning.</p>
+      <div class="art">{{consent:water}}</div>
+    </article>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="tour-h">
+  <div class="sec-head">
+    <p class="label">A short tour</p>
+    <h2 id="tour-h">One shell, a few screens, one record.</h2>
+    <p>Every screen is a view over the Tape. The sidebar lists the screens and your apps; the dock on the right holds Today and the live Tape.</p>
+  </div>
+  <div class="tour-grid">
+    <a href="/tour.html#today">{{shot:today||nolink}}<h3>Today</h3><p>Today's tasks, beside what needs you.</p></a>
+    <a href="/tour.html#bench">{{shot:bench||nolink}}<h3>Bench</h3><p>Everything waiting on your decision. Empty means done.</p></a>
+    <a href="/tour.html#village">{{shot:village||nolink}}<h3>Village</h3><p>Agents that pace themselves, sleep and keep a diary.</p></a>
+  </div>
+  <p class="small"><a class="more" href="/tour.html">See every part</a></p>
+</section>
+
+<section class="sec" aria-labelledby="apps-h">
+  <div class="sec-head">
+    <p class="label">Apps</p>
+    <h2 id="apps-h">{{apps:Count}} apps made by the JimmyHQ project.</h2>
+    <p>Each one installs on its own, from the Apps screen, after you read what it may do. Anything that sends something out starts in Practice, where it records what it would have done and sends nothing.</p>
+  </div>
+  {{apps:compact}}
+  <p class="small"><a class="more" href="/apps.html">What each one asks for</a></p>
+</section>
+
+<section class="sec" aria-labelledby="get-h">
+  <div class="models">
+    <div>
+      <p class="label">Get it</p>
+      <h2 id="get-h">Five commands, then your browser.</h2>
+      <p class="lede">You need <a href="/get-started.html#needs">uv and Node.js 22 or later</a>. Then open the address it prints, <code>127.0.0.1:8440</code>, and create your owner account.</p>
+      <p class="small"><a class="more" href="/get-started.html">Install and first steps</a></p>
+    </div>
+    <pre data-copy><code>git clone {{repo}}.git
+cd {{repo_name}}
+uv sync
+cd web &amp;&amp; npm install &amp;&amp; npm run build &amp;&amp; cd ..
+uv run jimmyhq run</code></pre>
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="log-h">
+  <div class="sec-head">
+    <p class="label">Dev log</p>
+    <h2 id="log-h">What changed lately.</h2>
+  </div>
+  {{changelog:teaser}}
+  <p class="small"><a class="more" href="/devlog.html">The whole dev log</a> &nbsp; <a class="more" href="/backlog.html">What comes next</a></p>
+</section>
+
+<section class="sec" aria-labelledby="status-h">
+  <div class="panel today">
+    <span class="label">Status</span>
+    <span><strong id="status-h">Early development.</strong> Most areas run today, and each guide says what works and what is planned. It is not ready for daily use yet. Connections to some outside services are written from their documentation and not yet tried against the real thing; <a href="/tour.html#status">where it stands</a> lists them.</span>
+  </div>
+</section>

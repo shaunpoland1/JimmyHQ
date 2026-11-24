@@ -1,0 +1,159 @@
+/* A note rendered from Markdown. Tokens only, so it follows the theme. */
+
+.memory-md {
+  min-width: 0;
+  max-width: 72ch;
+  overflow-wrap: anywhere;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: var(--text);
+}
+
+.memory-md > :first-child {
+  margin-top: 0;
+}
+.memory-md > :last-child {
+  margin-bottom: 0;
+}
+
+.memory-md p,
+.memory-md ul,
+.memory-md ol,
+.memory-md blockquote,
+.memory-md table,
+.memory-md pre {
+  margin: 0.65rem 0;
+}
+
+.memory-md h1,
+.memory-md h2,
+.memory-md h3,
+.memory-md h4,
+.memory-md h5,
+.memory-md h6 {
+  margin: 1.2rem 0 0.45rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.memory-md h1 {
+  font-size: 1.25rem;
+}
+.memory-md h2 {
+  font-size: 1.0625rem;
+}
+.memory-md h3,
+.memory-md h4,
+.memory-md h5,
+.memory-md h6 {
+  font-size: 0.9375rem;
+}
+
+.memory-md ul {
+  padding-left: 1.25rem;
+  list-style: disc;
+}
+.memory-md ol {
+  padding-left: 1.5rem;
+  list-style: decimal;
+}
+.memory-md li {
+  margin: 0.2rem 0;
+}
+.memory-md li > p {
+  margin: 0.2rem 0;
+}
+
+.memory-md a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.memory-md blockquote {
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--border);
+  color: var(--text-muted);
+}
+
+.memory-md hr {
+  margin: 1rem 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+
+.memory-md code {
+  padding: 0.05rem 0.3rem;
+  border: 1px solid var(--border);
+  border-radius: 0.3rem;
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.memory-md pre {
+  padding: 0.7rem 0.8rem;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  tab-size: 2;
+}
+.memory-md pre code {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: inherit;
+  overflow-wrap: normal;
+  white-space: pre;
+}
+
+.memory-md table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+.memory-md th,
+.memory-md td {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+.memory-md th {
+  background: var(--surface-2);
+  font-weight: 600;
+}
+
+/* The four small bars that show how sure a fact is. */
+.memory-bars {
+  display: inline-flex;
+  flex: none;
+  align-items: flex-end;
+  gap: 1.5px;
+  height: 0.625rem;
+}
+.memory-bars > span {
+  width: 3px;
+  border-radius: 1px;
+  background: var(--border);
+}
+.memory-bars > span[data-on] {
+  background: var(--text-muted);
+}
+.memory-bars > span:nth-child(1) {
+  height: 40%;
+}
+.memory-bars > span:nth-child(2) {
+  height: 60%;
+}
+.memory-bars > span:nth-child(3) {
+  height: 80%;
+}
+.memory-bars > span:nth-child(4) {
+  height: 100%;
+}

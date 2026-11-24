@@ -1,0 +1,706 @@
+[
+ {
+  "name": "a first run with no brand shows a hint that is not counted",
+  "data": {
+   "pages": [],
+   "posts": [],
+   "pieces": [],
+   "ideas": [],
+   "hint": "Add a brand.",
+   "reader": {
+    "loud": false
+   }
+  },
+  "waiting": 0
+ },
+ {
+  "name": "a draft that is ready counts once and a draft still being revised does not",
+  "data": {
+   "pages": [
+    {
+     "id": 1,
+     "name": "Garden notes"
+    }
+   ],
+   "posts": [
+    {
+     "id": 1,
+     "piece_id": 10,
+     "page_id": 1,
+     "title": "",
+     "body": "Post 1",
+     "state": "draft",
+     "piece_state": "ready",
+     "slot_ms": null,
+     "updated": 1,
+     "questions": 0,
+     "warnings": 0,
+     "out_of_step": false,
+     "note": ""
+    },
+    {
+     "id": 2,
+     "piece_id": 20,
+     "page_id": 1,
+     "title": "",
+     "body": "Post 2",
+     "state": "draft",
+     "piece_state": "revising",
+     "slot_ms": null,
+     "updated": 2,
+     "questions": 0,
+     "warnings": 0,
+     "out_of_step": false,
+     "note": ""
+    }
+   ],
+   "pieces": [],
+   "ideas": [],
+   "reader": {
+    "reads": true,
+    "loud": false,
+    "said": "",
+    "todo": "",
+    "heard_at": null,
+    "quiet": ""
+   },
+   "now_ms": 1800000000000
+  },
+  "waiting": 1
+ },
+ {
+  "name": "a post that went out, was declined or is booked and in step counts nothing",
+  "data": {
+   "pages": [
+    {
+     "id": 1,
+     "name": "Garden notes"
+    }
+   ],
+   "posts": [
+    {
+     "id": 1,
+     "piece_id": 10,
+     "page_id": 1,
+     "title": "",
+     "body": "Post 1",
+     "state": "went_out",
+     "piece_state": "ready",
+     "slot_ms": null,
+     "updated": 1,
+     "questions": 0,
+     "warnings": 0,
+     "out_of_step": false,
+     "note": ""
+    },
+    {
+     "id": 2,
+     "piece_id": 20,
+     "page_id": 1,
+     "title": "",
+     "body": "Post 2",
+     "state": "declined",
+     "piece_state": "ready",
+     "slot_ms": null,
+     "updated": 2,
+     "questions": 0,
+     "warnings": 0,
+     "out_of_step": false,
+     "note": ""
+    },
+    {
+     "id": 3,
+     "piece_id": 30,
+     "page_id": 1,
+     "title": "",
+     "body": "Post 3",
+     "state": "booked",
+     "piece_state": "ready",
+     "slot_ms": null,
+     "updated": 3,
+     "questions": 0,
+     "warnings": 0,
+     "out_of_step": false,
+     "note": ""
+    },
+    {
+     "id": 4,
+     "piece_id": 40,
+     "page_id": 1,
+     "title": "",
+     "body": "Post 4",
+     "state": "booking",
+     "piece_state": "ready",
+     "slot_ms": null,
+     "updated": 4,
+     "questions": 0,
+     "warnings": 0,
+     "out_of_step": false,
+     "note": ""
+    }
+   ],
+   "pieces": [],
+   "ideas": [],
+   "reader": {
+    "reads": true,
+    "loud": false,
+    "said": "",
+    "todo": "",
+    "heard_at": null,
+    "quiet": ""
+   },
+   "now_ms": 1800000000000
+  },
+  "waiting": 0
+ },
+ {
+  "name": "a booking with no answer counts once",
+  "data": {
+   "pages": [
+    {
+     "id": 1,
+     "name": "Garden notes"
+    }
+   ],
+   "posts": [
+    {
+     "id": 1,
+     "piece_id": 10,
+     "page_id": 1,
+     "title": "",
+     "body": "Post 1",
+     "state": "unsure",
+     "piece_state": "ready",
+     "slot_ms": null,
+     "updated": 1,
+     "questions": 0,
+     "warnings": 0,
+     "out_of_step": false,
+     "note": ""
+    }
+   ],
+   "pieces": [],
+   "ideas": [],
+   "reader": {
+    "reads": true,
+    "loud": false,
+    "said": "",
+    "todo": "",
+    "heard_at": null,
+    "quiet": ""
+   },
+   "now_ms": 1800000000000
+  },
+  "waiting": 1
+ },
+ {
+  "name": "a booking with no answer that is also out of step is listed in both groups and counts twice",
+  "data": {
+   "pages": [
+    {
+     "id": 1,
+     "name": "Garden notes"
+    }
+   ],
+   "posts": [
+    {
+     "id": 1,
+     "piece_id": 10,
+     "page_id": 1,
+     "title": "",
+     "body": "Post 1",
+     "state": "unsure",
+     "piece_state": "ready",
+     "slot_ms": null,
+     "updated": 1,
+     "questions": 0,
+     "warnings": 0,
+     "out_of_step": true,
+     "note": ""
+    }
+   ],
+   "pieces": [],
+   "ideas": [],
+   "reader": {
+    "reads": true,
+    "loud": false,
+    "said": "",
+    "todo": "",
+    "heard_at": null,
+    "quiet": ""
+   },
+   "now_ms": 1800000000000
+  },
+  "waiting": 2
+ },
+ {
+  "name": "a post missing from the scheduler and one out of step count one each",
+  "data": {
+   "pages": [
+    {
+     "id": 1,
+     "name": "Garden notes"
+    }
+   ],
+   "posts": [
+    {
+     "id": 1,
+     "piece_id": 10,
+     "page_id": 1,
+     "title": "",
+     "body": "Post 1",
+     "state": "missing",
+     "piece_state": "ready",
+     "slot_ms": null,
+     "updated": 1,
+     "questions": 0,
+     "warnings": 0,
+     "out_of_step": false,
+     "note": ""
+    },
+    {
+     "id": 2,
+     "piece_id": 20,
+     "page_id": 1,
+     "title": "",
+     "body": "Post 2",
+     "state": "booked",
+     "piece_state": "ready",
+     "slot_ms": null,
+     "updated": 2,
+     "questions": 0,
+     "warnings": 0,
+     "out_of_step": true,
+     "note": ""
+    }
+   ],
+   "pieces": [],
+   "ideas": [],
+   "reader": {
+    "reads": true,
+    "loud": false,
+    "said": "",
+    "todo": "",
+    "heard_at": null,
+    "quiet": ""
+   },
+   "now_ms": 1800000000000
+  },
+  "waiting": 2
+ },
+ {
+  "name": "each stopped piece counts and pieces under way do not",
+  "data": {
+   "pages": [
+    {
+     "id": 1,
+     "name": "Garden notes"
+    }
+   ],
+   "posts": [],
+   "pieces": [
+    {
+     "id": 1,
+     "page_id": 1,
+     "state": "stalled",
+     "words": "",
+     "created": 1,
+     "updated": 1,
+     "post_id": null,
+     "error": ""
+    },
+    {
+     "id": 2,
+     "page_id": 1,
+     "state": "stopped_source",
+     "words": "",
+     "created": 2,
+     "updated": 2,
+     "post_id": null,
+     "error": ""
+    },
+    {
+     "id": 3,
+     "page_id": 1,
+     "state": "held_overlap",
+     "words": "",
+     "created": 3,
+     "updated": 3,
+     "post_id": null,
+     "error": ""
+    },
+    {
+     "id": 4,
+     "page_id": 1,
+     "state": "writing",
+     "words": "",
+     "created": 4,
+     "updated": 4,
+     "post_id": null,
+     "error": ""
+    },
+    {
+     "id": 5,
+     "page_id": 1,
+     "state": "ready",
+     "words": "",
+     "created": 5,
+     "updated": 5,
+     "post_id": null,
+     "error": ""
+    },
+    {
+     "id": 6,
+     "page_id": 1,
+     "state": "dropped",
+     "words": "",
+     "created": 6,
+     "updated": 6,
+     "post_id": null,
+     "error": ""
+    }
+   ],
+   "ideas": [],
+   "reader": {
+    "reads": true,
+    "loud": false,
+    "said": "",
+    "todo": "",
+    "heard_at": null,
+    "quiet": ""
+   },
+   "now_ms": 1800000000000
+  },
+  "waiting": 3
+ },
+ {
+  "name": "a queued post with no time counts and one with a time does not",
+  "data": {
+   "pages": [
+    {
+     "id": 1,
+     "name": "Garden notes"
+    }
+   ],
+   "posts": [
+    {
+     "id": 1,
+     "piece_id": 10,
+     "page_id": 1,
+     "title": "",
+     "body": "Post 1",
+     "state": "queued",
+     "piece_state": "ready",
+     "slot_ms": null,
+     "updated": 1,
+     "questions": 0,
+     "warnings": 0,
+     "out_of_step": false,
+     "note": ""
+    },
+    {
+     "id": 2,
+     "piece_id": 20,
+     "page_id": 1,
+     "title": "",
+     "body": "Post 2",
+     "state": "queued",
+     "piece_state": "ready",
+     "slot_ms": 1800000600000,
+     "updated": 2,
+     "questions": 0,
+     "warnings": 0,
+     "out_of_step": false,
+     "note": ""
+    }
+   ],
+   "pieces": [],
+   "ideas": [],
+   "reader": {
+    "reads": true,
+    "loud": false,
+    "said": "",
+    "todo": "",
+    "heard_at": null,
+    "quiet": ""
+   },
+   "now_ms": 1800000000000
+  },
+  "waiting": 1
+ },
+ {
+  "name": "ideas from Reader count a line each up to five",
+  "data": {
+   "pages": [
+    {
+     "id": 1,
+     "name": "Garden notes"
+    }
+   ],
+   "posts": [],
+   "pieces": [],
+   "ideas": [
+    {
+     "id": 1,
+     "url": "https://news.example.com/1",
+     "title": "Idea 1",
+     "topic": "solar",
+     "why": "",
+     "created": 1
+    },
+    {
+     "id": 2,
+     "url": "https://news.example.com/2",
+     "title": "Idea 2",
+     "topic": "solar",
+     "why": "",
+     "created": 2
+    },
+    {
+     "id": 3,
+     "url": "https://news.example.com/3",
+     "title": "Idea 3",
+     "topic": "solar",
+     "why": "",
+     "created": 3
+    }
+   ],
+   "reader": {
+    "reads": true,
+    "loud": false,
+    "said": "",
+    "todo": "",
+    "heard_at": null,
+    "quiet": ""
+   },
+   "now_ms": 1800000000000
+  },
+  "waiting": 3
+ },
+ {
+  "name": "more than five ideas from Reader still count five",
+  "data": {
+   "pages": [
+    {
+     "id": 1,
+     "name": "Garden notes"
+    }
+   ],
+   "posts": [],
+   "pieces": [],
+   "ideas": [
+    {
+     "id": 1,
+     "url": "https://news.example.com/1",
+     "title": "Idea 1",
+     "topic": "solar",
+     "why": "",
+     "created": 1
+    },
+    {
+     "id": 2,
+     "url": "https://news.example.com/2",
+     "title": "Idea 2",
+     "topic": "solar",
+     "why": "",
+     "created": 2
+    },
+    {
+     "id": 3,
+     "url": "https://news.example.com/3",
+     "title": "Idea 3",
+     "topic": "solar",
+     "why": "",
+     "created": 3
+    },
+    {
+     "id": 4,
+     "url": "https://news.example.com/4",
+     "title": "Idea 4",
+     "topic": "solar",
+     "why": "",
+     "created": 4
+    },
+    {
+     "id": 5,
+     "url": "https://news.example.com/5",
+     "title": "Idea 5",
+     "topic": "solar",
+     "why": "",
+     "created": 5
+    },
+    {
+     "id": 6,
+     "url": "https://news.example.com/6",
+     "title": "Idea 6",
+     "topic": "solar",
+     "why": "",
+     "created": 6
+    },
+    {
+     "id": 7,
+     "url": "https://news.example.com/7",
+     "title": "Idea 7",
+     "topic": "solar",
+     "why": "",
+     "created": 7
+    },
+    {
+     "id": 8,
+     "url": "https://news.example.com/8",
+     "title": "Idea 8",
+     "topic": "solar",
+     "why": "",
+     "created": 8
+    }
+   ],
+   "reader": {
+    "reads": true,
+    "loud": false,
+    "said": "",
+    "todo": "",
+    "heard_at": null,
+    "quiet": ""
+   },
+   "now_ms": 1800000000000
+  },
+  "waiting": 5
+ },
+ {
+  "name": "a broken handover from Reader counts once, and a quiet one counts nothing",
+  "data": {
+   "pages": [
+    {
+     "id": 1,
+     "name": "Garden notes"
+    }
+   ],
+   "posts": [],
+   "pieces": [],
+   "ideas": [],
+   "reader": {
+    "reads": true,
+    "loud": true,
+    "said": "Reader did not answer.",
+    "todo": "Open the Apps screen.",
+    "heard_at": null,
+    "quiet": ""
+   },
+   "now_ms": 1800000000000
+  },
+  "waiting": 1
+ },
+ {
+  "name": "everything at once adds up",
+  "data": {
+   "pages": [
+    {
+     "id": 1,
+     "name": "Garden notes"
+    }
+   ],
+   "posts": [
+    {
+     "id": 1,
+     "piece_id": 10,
+     "page_id": 1,
+     "title": "",
+     "body": "Post 1",
+     "state": "draft",
+     "piece_state": "ready",
+     "slot_ms": null,
+     "updated": 1,
+     "questions": 0,
+     "warnings": 0,
+     "out_of_step": false,
+     "note": ""
+    },
+    {
+     "id": 2,
+     "piece_id": 20,
+     "page_id": 1,
+     "title": "",
+     "body": "Post 2",
+     "state": "unsure",
+     "piece_state": "ready",
+     "slot_ms": null,
+     "updated": 2,
+     "questions": 0,
+     "warnings": 0,
+     "out_of_step": false,
+     "note": ""
+    },
+    {
+     "id": 3,
+     "piece_id": 30,
+     "page_id": 1,
+     "title": "",
+     "body": "Post 3",
+     "state": "missing",
+     "piece_state": "ready",
+     "slot_ms": null,
+     "updated": 3,
+     "questions": 0,
+     "warnings": 0,
+     "out_of_step": false,
+     "note": ""
+    },
+    {
+     "id": 4,
+     "piece_id": 40,
+     "page_id": 1,
+     "title": "",
+     "body": "Post 4",
+     "state": "queued",
+     "piece_state": "ready",
+     "slot_ms": null,
+     "updated": 4,
+     "questions": 0,
+     "warnings": 0,
+     "out_of_step": false,
+     "note": ""
+    }
+   ],
+   "pieces": [
+    {
+     "id": 5,
+     "page_id": 1,
+     "state": "stalled",
+     "words": "",
+     "created": 5,
+     "updated": 5,
+     "post_id": null,
+     "error": ""
+    }
+   ],
+   "ideas": [
+    {
+     "id": 1,
+     "url": "https://news.example.com/1",
+     "title": "Idea 1",
+     "topic": "solar",
+     "why": "",
+     "created": 1
+    },
+    {
+     "id": 2,
+     "url": "https://news.example.com/2",
+     "title": "Idea 2",
+     "topic": "solar",
+     "why": "",
+     "created": 2
+    }
+   ],
+   "reader": {
+    "reads": true,
+    "loud": true,
+    "said": "x",
+    "todo": "y",
+    "heard_at": null,
+    "quiet": ""
+   },
+   "now_ms": 1800000000000
+  },
+  "waiting": 8
+ }
+]

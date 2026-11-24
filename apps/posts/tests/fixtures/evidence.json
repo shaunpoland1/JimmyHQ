@@ -1,0 +1,18 @@
+{
+  "about": "One draft and its source, read by both the Python checks and the page (web/tests/posts.evidence.test.ts), so the two always find the same numbers and quotations under the same keys. Invented text.",
+  "sentences": [
+    "The valley council said on Monday that 1,240 homes added solar panels last year.",
+    "That is 38% more than the year before.",
+    "\"We have never seen demand like this,\" said the council's energy officer.",
+    "Installers report waiting lists of up to 14 weeks."
+  ],
+  "body": "Solar roofs: 1,240 homes added panels, 38% more than before. “We have never seen demand like this,” said the energy officer. Waits reach 14 weeks, and 2.5 million panels are on order. A neighbour told us \"it was worth every penny\".",
+  "marks": [
+    {"text": "1,240", "kind": "number", "key": "1,240", "sentences": [1]},
+    {"text": "38%", "kind": "number", "key": "38%", "sentences": [2]},
+    {"text": "“We have never seen demand like this,”", "kind": "quote", "key": "we have never seen demand like this", "sentences": [3]},
+    {"text": "14", "kind": "number", "key": "14", "sentences": [4]},
+    {"text": "2.5 million", "kind": "number", "key": "2.5 million", "sentences": []},
+    {"text": "\"it was worth every penny\"", "kind": "quote", "key": "it was worth every penny", "sentences": []}
+  ]
+}

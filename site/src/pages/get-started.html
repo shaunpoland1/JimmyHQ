@@ -1,0 +1,84 @@
+<!--
+title: Get started
+description: Install JimmyHQ on your own computer, create your owner account, choose a model, add an app and set up backups.
+class: page start
+-->
+<header class="page-head">
+  <p class="label">Get started</p>
+  <h1>Install it, then give it a model.</h1>
+  <p class="lede">JimmyHQ runs from its source code today. It takes a few minutes. Nothing goes to a hosted model until you add one. For more depth, each step links to the guide in the repository.</p>
+</header>
+
+<ol class="steps">
+  <li id="needs">
+    <h2>Have uv and Node.js</h2>
+    <p>You need <strong>uv</strong>, which installs Python and JimmyHQ's packages, and <strong>Node.js 22 or later</strong>, which builds the web app once. Both are free. JimmyHQ's checks run on macOS, Linux and Windows.</p>
+  </li>
+  <li>
+    <h2>Install and run</h2>
+<pre data-copy><code>git clone {{repo}}.git
+cd {{repo_name}}
+uv sync
+cd web &amp;&amp; npm install &amp;&amp; npm run build &amp;&amp; cd ..
+uv run jimmyhq run</code></pre>
+    <p>Then open <code>http://127.0.0.1:8440</code> in your browser and create your owner account. JimmyHQ listens on your own machine only. To start it at login, run <code>uv run jimmyhq service install</code>.</p>
+  </li>
+  <li>
+    <h2>Choose a model</h2>
+    <p>Most of what JimmyHQ does needs a language model. Under Settings, Models, add one: a server on this computer such as {{providers:local}}, a model on another computer you own, or a hosted provider ({{providers:hosted}}) with your own key. Then give each role its model.</p>
+    <p class="small"><a class="more" href="{{code:docs/models.md}}" rel="noopener">The models guide</a></p>
+  </li>
+  <li>
+    <h2>Add an app</h2>
+    <p>Open Apps. Under <strong>Made by the JimmyHQ project</strong>, each app has its own Install button. You see what it may do and say yes, and it appears in the sidebar. Every app that sends something out starts in <strong>Practice</strong>, where it records what it would have done and sends nothing. Switching out of Practice is a setting you change yourself.</p>
+    <p class="small"><a class="more" href="{{code:docs/first-steps.md}}" rel="noopener">First steps</a></p>
+  </li>
+  <li>
+    <h2>Turn on backups</h2>
+    <p>Under Settings, Backups, choose a folder, ideally on another drive, and optionally a second one. Backups are off until you do. Each backup is checked as it is made, and the newest is tested in full every week. A backup holds what signs you in and your keys, so keep it somewhere only you can read.</p>
+<pre data-copy><code>uv run jimmyhq backup list
+uv run jimmyhq backup verify &lt;backup folder&gt;
+uv run jimmyhq backup restore &lt;backup folder&gt;</code></pre>
+    <p class="small"><a class="more" href="{{code:docs/architecture.md#back-up-and-move-your-data}}" rel="noopener">Back up and move your data</a></p>
+  </li>
+  <li>
+    <h2>Reach it from your phone, if you want to</h2>
+    <p>Settings, Access has a card that puts JimmyHQ on your own private network with Tailscale, and says exactly what it will run before it runs it. It never opens JimmyHQ to the public internet.</p>
+    <p class="small"><a class="more" href="{{code:docs/remote.md}}" rel="noopener">Reaching JimmyHQ from your other devices</a></p>
+  </li>
+</ol>
+
+<section class="sec" aria-labelledby="know-h">
+  <div class="sec-head">
+    <p class="label">Good to know</p>
+    <h2 id="know-h">A few commands you may need.</h2>
+  </div>
+  <div class="grid-2">
+    <div>
+      <h3>Where your data is</h3>
+      <p class="muted">One folder, outside the code. This prints it. Set <code>JIMMYHQ_DATA</code> to use another.</p>
+<pre data-copy><code>uv run jimmyhq data-dir</code></pre>
+    </div>
+    <div>
+      <h3>A forgotten password</h3>
+      <p class="muted">There is no recovery by email. On the computer JimmyHQ runs on, this asks for a new one and signs out every browser.</p>
+<pre data-copy><code>uv run jimmyhq owner set-password</code></pre>
+    </div>
+    <div>
+      <h3>Settings as files</h3>
+      <p class="muted">Every setting can be listed, changed, exported and imported from a terminal. A profile leaves out what is personal to you.</p>
+<pre data-copy><code>uv run jimmyhq settings list --changed
+uv run jimmyhq settings export --profile --changed -o my-profile.json
+uv run jimmyhq settings import my-profile.json --dry-run</code></pre>
+    </div>
+    <div>
+      <h3>Read more</h3>
+      <ul>
+        <li><a href="{{code:README.md}}" rel="noopener">README</a>: what each area does today</li>
+        <li><a href="{{code:docs/architecture.md}}" rel="noopener">Architecture</a>: processes, stores, the Tape</li>
+        <li><a href="{{code:docs/}}" rel="noopener">All the guides</a></li>
+        <li><a href="{{code:CONTRIBUTING.md}}" rel="noopener">Contributing</a></li>
+      </ul>
+    </div>
+  </div>
+</section>

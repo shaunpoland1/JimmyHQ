@@ -1,0 +1,33 @@
+<!--
+title: About
+description: Why JimmyHQ exists, and the design rules every change to it follows.
+class: page about
+-->
+<header class="page-head">
+  <p class="label">About</p>
+  <h1>A headquarters you own.</h1>
+  <p class="lede">More and more of the work people do goes through models and agents. JimmyHQ is a place to run that work yourself: on your own computer, with the models you choose, where every agent and app answers to one person and every decision goes on one record you can read.</p>
+</header>
+
+<div class="prose">
+  <p>It is built in public, under the Apache-2.0 licence. The code, the guides and the plan are all in the <a href="{{repo}}" rel="noopener">repository</a>, and the <a href="/backlog.html">backlog</a> says what is done and what is not.</p>
+  <p>It is early. Most areas work, and the guides are honest about what does not yet. Some connections to outside services have only been written from their documentation. If you try it, expect rough edges, and please say what you find.</p>
+</div>
+
+<section class="sec rules" aria-labelledby="rules-h">
+  <div class="sec-head">
+    <p class="label">Design rules</p>
+    <h2 id="rules-h">The rules every change follows.</h2>
+    <p>From <a href="{{code:CONTRIBUTING.md}}" rel="noopener">CONTRIBUTING.md</a>, word for word.</p>
+  </div>
+  {{rules}}
+</section>
+
+<section class="sec" aria-labelledby="help-h">
+  <div class="sec-head">
+    <p class="label">Taking part</p>
+    <h2 id="help-h">Bug reports, ideas and pull requests are welcome.</h2>
+    <p>Open an issue first for anything larger than a small fix, so the approach can be agreed. To report a security problem, see the <a href="/security.html">security page</a>.</p>
+  </div>
+  <div class="actions"><a class="btn btn-primary" href="{{code:CONTRIBUTING.md}}" rel="noopener">How to contribute</a><a class="btn" href="{{repo}}/issues" rel="noopener">Issues</a></div>
+</section>

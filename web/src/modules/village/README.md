@@ -1,0 +1,1 @@
+The Village screen lives here: the roster, one agent's page (overview, chat, diary, memory with nights and rollback, files and activity), creating, setting up and retiring agents, priorities, and the village-wide break room and work board. See CLAUDE.md, "Modules".

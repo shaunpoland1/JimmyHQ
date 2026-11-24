@@ -1,0 +1,300 @@
+{
+ "blocks": [
+  {
+   "tag": "h1",
+   "sentences": [
+    {
+     "i": 1,
+     "text": "What a garden plot really saves",
+     "cites": [],
+     "marks": [],
+     "checks": []
+    }
+   ]
+  },
+  {
+   "tag": "p",
+   "sentences": [
+    {
+     "i": 2,
+     "text": "Families with a garden plot spent 18% less on vegetables, a survey of 1,200 households found.",
+     "cites": [
+      [
+       1,
+       1
+      ]
+     ],
+     "marks": [
+      {
+       "start": 34,
+       "end": 37,
+       "kind": "number",
+       "check": 1
+      },
+      {
+       "start": 70,
+       "end": 75,
+       "kind": "number",
+       "check": 2
+      }
+     ],
+     "checks": [
+      8
+     ]
+    }
+   ]
+  },
+  {
+   "tag": "h2",
+   "sentences": [
+    {
+     "i": 3,
+     "text": "What the plots give",
+     "cites": [],
+     "marks": [],
+     "checks": []
+    }
+   ]
+  },
+  {
+   "tag": "p",
+   "sentences": [
+    {
+     "i": 4,
+     "text": "Each plot grew 41 kilograms of produce on average.",
+     "cites": [
+      [
+       1,
+       4
+      ]
+     ],
+     "marks": [
+      {
+       "start": 15,
+       "end": 17,
+       "kind": "number",
+       "check": 3
+      }
+     ],
+     "checks": []
+    },
+    {
+     "i": 5,
+     "text": "Compost helped too: a trial on 60 plots saw yields rise by 9%.",
+     "cites": [
+      [
+       2,
+       2
+      ]
+     ],
+     "marks": [
+      {
+       "start": 31,
+       "end": 33,
+       "kind": "number",
+       "check": 4
+      },
+      {
+       "start": 59,
+       "end": 61,
+       "kind": "number",
+       "check": 5
+      }
+     ],
+     "checks": []
+    }
+   ]
+  },
+  {
+   "tag": "p",
+   "sentences": [
+    {
+     "i": 6,
+     "text": "Not every plot is used, though: 12% were left empty by August.",
+     "cites": [
+      [
+       1,
+       8
+      ]
+     ],
+     "marks": [
+      {
+       "start": 32,
+       "end": 35,
+       "kind": "number",
+       "check": 6
+      }
+     ],
+     "checks": []
+    }
+   ]
+  },
+  {
+   "tag": "p",
+   "sentences": [
+    {
+     "i": 7,
+     "text": "Plots saved families 77% of their food bill.",
+     "cites": [
+      [
+       1,
+       1
+      ]
+     ],
+     "marks": [
+      {
+       "start": 21,
+       "end": 24,
+       "kind": "number",
+       "check": 7
+      }
+     ],
+     "checks": []
+    }
+   ]
+  },
+  {
+   "tag": "li",
+   "sentences": [
+    {
+     "i": 8,
+     "text": "Researchers found that plots double happiness.",
+     "cites": [],
+     "marks": [],
+     "checks": [
+      9
+     ]
+    }
+   ]
+  },
+  {
+   "tag": "li",
+   "sentences": [
+    {
+     "i": 9,
+     "text": "Families ate vegetables on five days a week.",
+     "cites": [
+      [
+       3,
+       3
+      ]
+     ],
+     "marks": [],
+     "checks": []
+    }
+   ]
+  }
+ ],
+ "checks": [
+  {
+   "id": 1,
+   "name": "numbers",
+   "level": "ok",
+   "detail": "“18%” is in S1:1.",
+   "evidence": [
+    "S1:1"
+   ],
+   "answer": null
+  },
+  {
+   "id": 2,
+   "name": "numbers",
+   "level": "ok",
+   "detail": "“1,200” is in S1:1.",
+   "evidence": [
+    "S1:1"
+   ],
+   "answer": null
+  },
+  {
+   "id": 3,
+   "name": "numbers",
+   "level": "ok",
+   "detail": "“41” is in S1:4.",
+   "evidence": [
+    "S1:4"
+   ],
+   "answer": null
+  },
+  {
+   "id": 4,
+   "name": "numbers",
+   "level": "ok",
+   "detail": "“60” is in S2:2.",
+   "evidence": [
+    "S2:2"
+   ],
+   "answer": null
+  },
+  {
+   "id": 5,
+   "name": "numbers",
+   "level": "ok",
+   "detail": "“9%” is in S2:2.",
+   "evidence": [
+    "S2:2"
+   ],
+   "answer": null
+  },
+  {
+   "id": 6,
+   "name": "numbers",
+   "level": "ok",
+   "detail": "“12%” is in S1:8.",
+   "evidence": [
+    "S1:8"
+   ],
+   "answer": null
+  },
+  {
+   "id": 7,
+   "name": "numbers",
+   "level": "ask",
+   "detail": "Is “77%” right in “Plots saved families 77% of their food bill.”? It is in no sentence of any source.",
+   "evidence": [],
+   "answer": null
+  },
+  {
+   "id": 8,
+   "name": "names",
+   "level": "ok",
+   "detail": "Families is named in S1:1.",
+   "evidence": [
+    "S1:1"
+   ],
+   "answer": null
+  },
+  {
+   "id": 9,
+   "name": "uncited",
+   "level": "ask",
+   "detail": "“Researchers found that plots double happiness.” states a fact and cites nothing. Which source says it?",
+   "evidence": [],
+   "answer": null
+  },
+  {
+   "id": 10,
+   "name": "links",
+   "level": "ok",
+   "detail": "There are no links but the sources list.",
+   "evidence": [],
+   "answer": null
+  },
+  {
+   "id": 11,
+   "name": "markup",
+   "level": "ok",
+   "detail": "The markup is the allowed set.",
+   "evidence": [],
+   "answer": null
+  },
+  {
+   "id": 12,
+   "name": "review",
+   "level": "ok",
+   "detail": "The review found nothing to raise.",
+   "evidence": [],
+   "answer": null
+  }
+ ]
+}

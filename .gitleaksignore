@@ -1,0 +1,4 @@
+# A made-up sixteen-character address id in a web test, not a credential.
+54c54f01d8e635a2c03dd8f43404fe94bd618340:web/tests/apps.local.test.ts:generic-api-key:10
+# The made-up test key written without its first letter, in one commit; not a credential.
+8cb5ef3b27acc70f3c18b92c39c6e177c7b409d2:tests/test_apps_sdk_keybind.py:generic-api-key:18

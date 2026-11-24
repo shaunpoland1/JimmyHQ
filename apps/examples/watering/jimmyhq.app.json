@@ -1,0 +1,19 @@
+{
+  "manifest": 1,
+  "id": "watering",
+  "name": "Watering",
+  "summary": "Asks on your Bench whether the plants were watered, and keeps the answers.",
+  "author": "The JimmyHQ project",
+  "licence": "Apache-2.0",
+  "version": "0.1.0",
+  "tier": "full",
+  "api": "1.0",
+  "permissions": ["bench.file", "jobs"],
+  "screens": [{"id": "log", "label": "Watering", "entry": "web/index.html"}],
+  "settings": [
+    {"key": "ask_every_minutes", "type": "int", "default": 1440, "min": 5, "max": 10080,
+     "label": "Ask every (minutes)", "help": "How often to ask whether the plants were watered."}
+  ],
+  "server": {"entry": "watering.main:app", "python": ">=3.12"},
+  "cards": [{"kind": "round", "label": "Watering round"}]
+}

@@ -1,0 +1,49 @@
+<!--
+title: Apps
+description: The apps made by the JimmyHQ project, what each one does, and the exact sentences you read before you install it.
+class: page apps
+-->
+<header class="page-head">
+  <p class="label">Apps</p>
+  <h1>Apps, and what each one asks of you.</h1>
+  <p class="lede">An app adds a screen, a job or a tool to JimmyHQ. Before one installs you read what it may do, in the sentences below, and say yes. This page is built from each app's own manifest, so it always matches the version in the code.</p>
+</header>
+
+<section aria-labelledby="kinds-h">
+  <h2 id="kinds-h" class="sr-only">The three kinds of app</h2>
+  <div class="kinds">
+    <div class="panel"><h3><span class="chip">described</span></h3><p>A manifest and nothing else: tables and views. It keeps and shows records and has no code.</p></div>
+    <div class="panel"><h3><span class="chip tier-sandboxed">sandboxed</span></h3><p>A page in a locked frame, with no network of its own. It can do only what its permissions list, through one bridge.</p></div>
+    <div class="panel"><h3><span class="chip tier-full">full</span></h3><p>A program that runs as you. It can do anything you can, and JimmyHQ cannot limit it. Install only the ones you trust.</p></div>
+  </div>
+  <p class="small muted">An app marked <span class="chip">private</span> asks only a model on your own machines, and keeps what it holds off your record.</p>
+</section>
+
+<section class="sec" aria-labelledby="first-h">
+  <div class="sec-head">
+    <p class="label">Made by the JimmyHQ project</p>
+    <h2 id="first-h">{{apps:Count}} apps ship with JimmyHQ.</h2>
+    <p>They install by name from the Apps screen, each on its own. An app counts as coming with JimmyHQ only when its files match, byte for byte, what ships in this copy. For a full app, the first line you read is the warning.</p>
+  </div>
+  <div class="apps-list">
+{{apps:first-party}}
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="ex-h">
+  <div class="sec-head">
+    <p class="label">Examples</p>
+    <h2 id="ex-h">Small apps to learn from.</h2>
+    <p>They ship with JimmyHQ too. <code>watering</code> is the one to read first: a job, a card type with its own buttons, your decision and a screen, in one short file.</p>
+  </div>
+  <div class="apps-list">
+{{apps:examples}}
+  </div>
+</section>
+
+<section class="sec" aria-labelledby="write-h">
+  <div class="panel today">
+    <span class="label">Write one</span>
+    <span><code>uv run jimmyhq apps new</code> writes a skeleton, and <a href="{{code:docs/apps.md}}" rel="noopener">the apps guide</a> covers the manifest, the bridge and the SDK. There is no app store or review yet: an app from anyone else is unreviewed.</span>
+  </div>
+</section>

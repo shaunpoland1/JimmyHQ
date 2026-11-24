@@ -1,0 +1,38 @@
+# Private working material: never public
+Reference/
+CLAUDE.local.md
+
+# Runtime data must live outside the repo; these are a second line of defence
+data/
+*.db
+*.db-wal
+*.db-shm
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+dist/
+*.egg-info/
+
+# Web
+node_modules/
+web/dist/
+*.tsbuildinfo
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local worktrees used while building modules in parallel
+.worktrees/
+
+# The web build copied into the package while a release is built
+server/jimmyhq/web/static/

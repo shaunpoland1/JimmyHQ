@@ -1,0 +1,16 @@
+# Secret scan settings. Extends the default rules.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Made-up values used in event kind examples and in tests of the code that hides secrets. Not credentials."
+regexes = [
+  '''01JABCDEFGHJKMNPQRSTVWXYZ0''',
+  '''[sc]?k-test-SECRET-0123456789''',
+  '''sk-test-0123456789abcdef''',
+  '''test-key-0123456789''',
+  '''abcdef0123456789''',
+  '''sk-live-abcdefghijklmnop1234''',
+  '''hunter2-plain''',
+  '''eyJhbGciOiJIUzI1NiJ9\.eyJzdWIiOiIxMjM0NTY3ODkwIn0\.c2lnbmF0dXJl''',
+]

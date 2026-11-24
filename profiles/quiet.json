@@ -1,0 +1,16 @@
+{
+  "jimmyhq_settings": 1,
+  "name": "Quiet",
+  "description": "Fewer nudges. Agents start fewer conversations, post fewer findings and hand over less to your Bench each day, memory raises at most two cards at a time, and the screen drops the usage strip and the agents' mood readouts.",
+  "settings": {
+    "village.comms.chat_messages_per_day": 2,
+    "village.comms.findings_per_day": 1,
+    "village.comms.findings_max_per_day": 2,
+    "village.comms.urgent_findings_per_day": 0,
+    "village.comms.handovers_per_day": 2,
+    "village.comms.priority_suggestions_per_day": 1,
+    "memory.mine_max_open_cards": 2,
+    "village.show_vitals": false,
+    "appearance.show_usage_strip": false
+  }
+}

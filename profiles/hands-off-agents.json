@@ -1,0 +1,13 @@
+{
+  "jimmyhq_settings": 1,
+  "name": "Hands-off agents",
+  "description": "For someone who wants agents to get on with it: they may take more requests and start more tasks of their own, interrupt you less, and the Bench offers more freedom after three approvals in a row. Anything that leaves the building still waits for your click.",
+  "settings": {
+    "village.comms.requests_taken_per_day": 15,
+    "village.comms.own_tasks_per_day": 10,
+    "village.comms.own_tasks_open": 5,
+    "village.comms.chat_messages_per_day": 3,
+    "village.comms.findings_per_day": 2,
+    "bench.promotion_streak": 3
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "manifest": 1,
+  "id": "books_read",
+  "name": "Books read",
+  "summary": "A reading log.",
+  "author": "The JimmyHQ project",
+  "licence": "Apache-2.0",
+  "version": "1.0.0",
+  "tier": "sandboxed",
+  "api": "1.0",
+  "permissions": [],
+  "screens": [{"id": "main", "label": "Books read", "entry": "described"}],
+  "tables": {
+    "author": {
+      "label": "Authors",
+      "fields": {
+        "name": {"type": "text", "label": "Name", "required": true},
+        "born": {"type": "int", "label": "Born", "min": 1, "max": 3000}
+      }
+    },
+    "book": {
+      "label": "Books",
+      "fields": {
+        "title": {"type": "text", "label": "Title", "required": true},
+        "author": {"type": "link", "label": "Author", "table": "author"},
+        "status": {"type": "choice", "label": "Status", "options": ["to read", "reading", "finished"]},
+        "finished": {"type": "date", "label": "Finished on"},
+        "stars": {"type": "int", "label": "Stars", "min": 1, "max": 5},
+        "pages": {"type": "int", "label": "Pages", "min": 1, "max": 20000},
+        "paid": {"type": "money", "label": "Paid", "currency": "USD", "min": 0},
+        "owned": {"type": "bool", "label": "On my shelf"},
+        "notes": {"type": "text", "label": "Notes"},
+        "per_page": {"type": "computed", "label": "Cost per page", "formula": "paid / pages"}
+      }
+    }
+  },
+  "views": [
+    {"id": "all", "label": "All books", "table": "book",
+     "fields": ["title", "author", "status", "finished", "stars", "pages", "paid"],
+     "sort": ["-finished", "title"],
+     "totals": {"stars": "avg", "pages": "sum", "paid": "sum"}},
+    {"id": "shelf", "label": "By status", "table": "book", "group": "status",
+     "fields": ["title", "author", "stars"], "sort": ["title"]},
+    {"id": "favourites", "label": "Favourites", "table": "book",
+     "filter": [{"field": "stars", "op": "ge", "value": 4}],
+     "fields": ["title", "author", "finished", "stars"], "sort": ["-stars", "title"],
+     "totals": {"stars": "count"}},
+    {"id": "authors", "label": "Authors", "table": "author", "sort": ["name"],
+     "totals": {"name": "count"}}
+  ]
+}

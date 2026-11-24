@@ -1,0 +1,45 @@
+<!--
+title: Security and privacy
+description: How JimmyHQ keeps your data on your machine and your decisions in your hands, in plain words, and what it does not protect against.
+class: page security
+-->
+<header class="page-head">
+  <p class="label">Security and privacy</p>
+  <h1>What it protects, and what it does not.</h1>
+  <p class="lede">JimmyHQ is built for one person on their own computer. The rules below are enforced in code, with tests. The second list matters as much as the first: read it before you trust JimmyHQ with something.</p>
+</header>
+
+<section aria-labelledby="does-h">
+  <div class="sec-head"><p class="label">What it does</p><h2 id="does-h">The model, in plain words.</h2></div>
+  <ul class="claims">
+    <li><h3>It stays on your machine</h3><div><p>It listens on <code>127.0.0.1</code>, so only the computer it runs on can open it. Opening it to a network is your choice, and a request that Tailscale Funnel brings in from the public internet is refused unless you say otherwise in its config file.</p><p>A request relayed by a proxy or tunnel on the same computer is never treated as coming from the computer itself.</p></div></li>
+    <li><h3>One owner</h3><div><p>Your password is stored as an scrypt hash, and a browser session is a cookie scripts cannot read, of which only a digest is kept. Five wrong passwords in fifteen minutes pause sign-in. Changing your password signs out every other browser.</p></div></li>
+    <li><h3>Tokens are never the owner</h3><div><p>A token you make for another tool is a reader or a writer. No token can change settings, passwords or other tokens, and a revoked token stops working on its next request.</p></div></li>
+    <li><h3>Your keys stay put</h3><div><p>Keys for outside services are kept in an owner-only file in your data folder. They are never written to the Tape or to logs, never shown again once saved, and never put in a settings file.</p></div></li>
+    <li><h3>You decide</h3><div><p>Only your own click records a decision on the Bench. A token, an agent or an app never decides. Sending, posting, paying and deleting wait for you unless you have allowed that one action.</p><p>Text from a page, an email or a file is data, not instructions: it cannot set off an action without your approval.</p></div></li>
+    <li><h3>Your model first</h3><div><p>No prompt goes to a hosted model unless you put one in a role or picked it by name, and when a fallback answers, the reply says so. A provider that needs a key and has none is never contacted.</p></div></li>
+    <li><h3>Sandboxed apps</h3><div><p>A sandboxed app's page runs in a locked frame: no cookies, no reach into JimmyHQ's page, no network of its own. It can do only what you agreed to at install, and an update that asks for more waits for your yes.</p></div></li>
+    <li><h3>Private things stay off the record</h3><div><p>Chat off the record, and what private apps hold, are kept in stores of their own with a real delete. Something that was on the record can be erased for good: its events keep their place and lose what they said, and the old bytes are overwritten in the file.</p></div></li>
+    <li><h3>The door is shut</h3><div><p>Other AI apps reach JimmyHQ over MCP only once you switch the door on. It has a port of its own that answers nothing else, each client has its own token, and a new client can use no tools until you switch them on one by one.</p></div></li>
+  </ul>
+</section>
+
+<section class="sec" aria-labelledby="not-h">
+  <div class="sec-head"><p class="label">What it does not do</p><h2 id="not-h">Limits you should know about.</h2></div>
+  <ul class="claims not">
+    <li><h3>A full app runs as you</h3><div><p>A full app can read and change your files and use the network, and JimmyHQ cannot limit it. The apps made by the JimmyHQ project are full apps. There is no store and no review yet, so an app from anyone else is unreviewed: install only the ones you trust.</p></div></li>
+    <li><h3>What you send out, goes out</h3><div><p>A host you grant an app receives what the app sends there. If a role uses a hosted model, what is asked of it leaves your computer. Web searches and the addresses read leave your computer too.</p></div></li>
+    <li><h3>Anyone with your computer account</h3><div><p>Whoever can use your account on the computer JimmyHQ runs on can read every file it keeps, and can set a new password from a terminal. JimmyHQ does not encrypt its data folder itself: use your system's disk encryption.</p></div></li>
+    <li><h3>Copies made earlier</h3><div><p>Erasing something does not reach a backup or a snapshot made before, or old blocks the disk keeps. JimmyHQ's own backups lose it as the older ones are pruned.</p></div></li>
+    <li><h3>Backups hold the keys</h3><div><p>A backup contains what signs you in and the keys for outside services. JimmyHQ makes each backup folder owner-only where the drive allows it; most USB sticks and many network shares cannot.</p></div></li>
+    <li><h3>Small leaks from a page</h3><div><p>A determined sandboxed page may leak a few bytes through browser gaps such as DNS prefetch.</p></div></li>
+    <li><h3>The public internet</h3><div><p>JimmyHQ is not made to face the open internet. Use a private network for your other devices.</p></div></li>
+  </ul>
+</section>
+
+<section class="sec" aria-labelledby="report-h">
+  <div class="panel today">
+    <span class="label">Found a problem?</span>
+    <span id="report-h">Please do not open a public issue. Use GitHub's private reporting: on the repository's Security tab, choose Report a vulnerability. <a href="{{code:SECURITY.md}}" rel="noopener">The security policy</a> says what to include.</span>
+  </div>
+</section>

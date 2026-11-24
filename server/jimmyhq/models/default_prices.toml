@@ -1,0 +1,32 @@
+# Example prices, per million tokens.
+#
+# These are EXAMPLES so that cost estimates show something on a new install.
+# They are not kept up to date. Owners edit their own table under Settings,
+# Models, Prices (PUT /api/models/prices); once saved, the owner's table
+# replaces this file entirely.
+#
+# provider  a provider type (openai, anthropic, google, bedrock,
+#           openai_compatible), one provider's id, or "*" for any
+# model     a pattern; * matches any run of characters
+# The first line that matches a call is the one used.
+
+[[prices]]
+id = "anthropic-opus"
+provider = "anthropic"
+model = "claude-opus-*"
+input_per_mtok = 4.0
+output_per_mtok = 20.0
+
+[[prices]]
+id = "anthropic-sonnet"
+provider = "anthropic"
+model = "claude-sonnet-*"
+input_per_mtok = 2.0
+output_per_mtok = 10.0
+
+[[prices]]
+id = "anthropic-haiku"
+provider = "anthropic"
+model = "claude-haiku-*"
+input_per_mtok = 0.1
+output_per_mtok = 0.5

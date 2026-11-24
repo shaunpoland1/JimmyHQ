@@ -1,0 +1,88 @@
+[project]
+name = "jimmyhq"
+version = "0.1.0"
+description = "A local-first platform for getting more done with your own models and your own agents."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.32",
+    "pydantic>=2.9",
+    "platformdirs>=4.3",
+    "httpx>=0.27",
+    "python-dateutil>=2.9",
+    "python-multipart>=0.0.12",
+    # Windows ships no time zone database, and a minimal Linux may not either.
+    "tzdata>=2024.1",
+    # Vector arithmetic for memory search.
+    "numpy>=2.1",
+    # Web pages to Markdown for web lookup. Pure Python, with Beautiful Soup.
+    "markdownify>=1.1",
+]
+
+[project.optional-dependencies]
+# Speech-to-text on this machine, without a separate server.
+# faster-whisper 1.2 opens a recording with an option PyAV 19 took away, so every recording
+# was refused as "could not be read as audio". PyAV is held below 19 until it catches up;
+# tests/test_speech_real_decode.py fails if the two stop working together.
+speech = ["faster-whisper>=1.1", "av>=15,<19"]
+# NVIDIA's Parakeet on this machine's processor, through ONNX Runtime (no PyTorch). PyAV
+# turns a browser's webm, ogg or mp4 recording into the plain samples Parakeet reads.
+speech-parakeet = ["onnx-asr[cpu,hub]>=0.12", "av>=15,<19"]
+# Models through AWS Bedrock.
+bedrock = ["boto3>=1.35"]
+
+[project.scripts]
+jimmyhq = "jimmyhq.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-xdist>=3.6",
+    "ruff>=0.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+# The built web app, copied in by scripts/build_release.py. It is not in git,
+# so it has to be named here to be packed (in the source archive too, which the
+# wheel is built from); a wheel without it serves no pages.
+artifacts = ["server/jimmyhq/web/static/**"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["server/jimmyhq"]
+
+# What the app platform serves that lives outside the package in the repo: the whole `apps`
+# folder (the example apps in `examples/` and every first-party app, whatever is in the
+# checkout), the JavaScript bridge every app's page is given as `_bridge.js`, and the Python
+# SDK for a full app's program. `jimmyhq.apps.store.bundled` looks for them here, and the
+# folder keeps the layout it has in a checkout, so no app is named in this file.
+[tool.hatch.build.targets.wheel.force-include]
+"apps" = "jimmyhq/apps/_apps"
+"sdk/js/bridge.js" = "jimmyhq/apps/_sdk/bridge.js"
+# The page helper every app's page is given as `_ui.js` (text nodes only, its own dialogs).
+"sdk/js/ui.js" = "jimmyhq/apps/_sdk/ui.js"
+# The Python SDK a full app's program runs with (`apps.runtime` puts it on its path).
+"sdk/python/jimmyhq_app" = "jimmyhq/apps/_sdk/python/jimmyhq_app"
+
+[tool.pytest.ini_options]
+# First-party apps keep their tests beside them; the pattern collects whichever are in the
+# checkout.
+testpaths = ["tests", "apps/*/tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+# An app's own packages are not listed: no app is named in this file.
+src = ["server", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "DTZ", "S105", "S106"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106"]

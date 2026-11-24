@@ -1,0 +1,219 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  color-scheme: light;
+  --bg: #eef0eb;
+  --surface: #ffffff;
+  --surface-2: #f4f9e9;
+  --border: #d9dcd3;
+  --text: #153243;
+  --text-muted: #5c6b73;
+  --text-faint: #656c63;
+  --accent: #284b63;
+  --accent-fg: #f4f9e9;
+  --sage: #b4b8ab;
+  --success: #2b7052;
+  --warning: #8a5a10;
+  --danger: #b4483f;
+  /* One colour per agent, for tiles and markers. */
+  --ag-a: #2a747a;
+  --ag-b: #7e5192;
+  --ag-c: #8c6010;
+  --ag-d: #a64b35;
+  --logo-stem: #153243;
+  --logo-lobe: #284b63;
+  --shadow: 0 8px 30px rgb(21 50 67 / 0.12);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0e222e;
+  --surface: #153243;
+  --surface-2: #1b3d51;
+  --border: #2a4a5e;
+  --text: #f4f9e9;
+  --text-muted: #b4b8ab;
+  --text-faint: #9aa8ac;
+  --accent: #7fb0d0;
+  --accent-fg: #0e222e;
+  --sage: #b4b8ab;
+  --success: #6fc49b;
+  --warning: #e0b050;
+  --danger: #e5837a;
+  /* One colour per agent, for tiles and markers. */
+  --ag-a: #7cc5cb;
+  --ag-b: #c7a3d6;
+  --ag-c: #e0b45c;
+  --ag-d: #e89a83;
+  --logo-stem: #f4f9e9;
+  --logo-lobe: #b4b8ab;
+  --shadow: 0 8px 30px rgb(0 0 0 / 0.4);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-faint: var(--text-faint);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-sage: var(--sage);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --shadow-pop: var(--shadow);
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  button,
+  [role="tab"],
+  [role="option"],
+  select {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  ::placeholder {
+    color: var(--text-faint);
+  }
+}
+
+@layer components {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    height: 2.25rem;
+    padding: 0 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background-color 0.12s, border-color 0.12s;
+  }
+  .btn:hover:not(:disabled) {
+    background: var(--surface-2);
+  }
+  .btn-primary {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--accent-fg);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--accent) 88%, var(--text));
+  }
+  .btn-danger {
+    border-color: var(--danger);
+    background: var(--danger);
+    color: var(--surface);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--danger) 88%, var(--text));
+  }
+
+  .icon-btn {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.375rem;
+    color: var(--text-muted);
+    transition: background-color 0.12s, color 0.12s;
+  }
+  .icon-btn:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--text) 8%, transparent);
+    color: var(--text);
+  }
+
+  .input {
+    width: 100%;
+    min-width: 0;
+    height: 2.25rem;
+    padding: 0 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.8125rem;
+  }
+  .input:hover {
+    border-color: var(--sage);
+  }
+  .input[aria-invalid="true"] {
+    border-color: var(--danger);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    padding: 0.05rem 0.4rem;
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    background: var(--surface-2);
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    line-height: 1.5;
+  }
+
+  .dot {
+    display: inline-block;
+    flex: none;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

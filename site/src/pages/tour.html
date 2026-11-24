@@ -1,0 +1,143 @@
+<!--
+title: Tour
+description: Each part of JimmyHQ and what it is for: Today, the Bench, Tasks, Chat, the Village, Memory, the Tape, Apps, Settings and the Wall.
+class: page tour
+-->
+<header class="page-head">
+  <p class="label">Tour</p>
+  <h1>Each part, and what it is for.</h1>
+  <p class="lede">JimmyHQ is one shell: a sidebar of screens and apps, a dock on the right with Today and the live Tape, and a slim bar that says what is running. Every picture is JimmyHQ running on invented sample data. <a href="#status">Where it stands</a> says what is solid and what is not built yet.</p>
+</header>
+
+<ul class="index" aria-label="Parts">
+  <li><a href="#today">Today</a></li><li><a href="#bench">Bench</a></li><li><a href="#tasks">Tasks</a></li><li><a href="#chat">Chat</a></li><li><a href="#village">Village</a></li><li><a href="#memory">Memory</a></li><li><a href="#tape">Tape</a></li><li><a href="#apps">Apps</a></li><li><a href="#settings">Settings</a></li><li><a href="#wall">Wall</a></li><li><a href="#phone">Your phone</a></li><li><a href="#underneath">Underneath</a></li><li><a href="#status">Where it stands</a></li>
+</ul>
+
+<section class="stop" id="today" aria-labelledby="today-h">
+  <div>
+    <p class="label">Today</p>
+    <h2 id="today-h">What is on your plate today.</h2>
+    <p>The sheet for today, in the dock beside whatever screen you are on: today's tasks, ticked or not, with late ones marked. Today is your own calendar date, in your time zone.</p>
+  </div>
+  {{shot:today|The Bench, with the Today sheet in the side panel.}}
+</section>
+
+<section class="stop" id="bench" aria-labelledby="bench-h">
+  <div>
+    <p class="label">Bench</p>
+    <h2 id="bench-h">One inbox for every decision.</h2>
+    <p>A finding from an agent, a draft to approve before it is sent, something done for you that you can undo. Cards sit in three lanes: Needs you, Done for you and Waiting. A card gets Approve, Not yet and No, and No needs a reason.</p>
+    <p>A decision is for the version of the card you read. If the card was changed after you opened it, your click is refused and you read it again.</p>
+  </div>
+  {{shot:bench}}
+</section>
+
+<section class="stop" id="tasks" aria-labelledby="tasks-h">
+  <div>
+    <p class="label">Tasks</p>
+    <h2 id="tasks-h">Your work and your agents' work, in one list.</h2>
+    <p>One list, in one order you set by hand, for what you do and what your agents do. Tasks can repeat on a rule, and a missed round is skipped rather than piled up.</p>
+  </div>
+  {{shot:tasks}}
+</section>
+
+<section class="stop" id="chat" aria-labelledby="chat-h">
+  <div>
+    <p class="label">Chat</p>
+    <h2 id="chat-h">Talk to any model you have set up.</h2>
+    <p>Every conversation has a switch: on the record or off it. On the record, what you say goes on the Tape with everything else. Off the record, it is kept in a store of its own with a real delete. You can flip it as often as you like.</p>
+  </div>
+  {{shot:chat}}
+</section>
+
+<section class="stop" id="village" aria-labelledby="village-h">
+  <div>
+    <p class="label">Village</p>
+    <h2 id="village-h">Agents that pace themselves.</h2>
+    <p>Each agent has a body: energy, social and purpose, and frustration and curiosity that build. They decide whether it works, rests, explores or sleeps, so it stops pushing at something that is not working. Each keeps a diary, and its memory is sorted while it sleeps.</p>
+    <p>An agent gets the web, an integration or a browser of its own only when you switch that on for it.</p>
+  </div>
+  {{shot:village}}
+</section>
+
+<section class="stop" id="memory" aria-labelledby="memory-h">
+  <div>
+    <p class="label">Memory</p>
+    <h2 id="memory-h">Notes you can read, edit and delete.</h2>
+    <p>What JimmyHQ knows about you lives in a library of plain Markdown files. The files are the truth: the search index can be thrown away and rebuilt from them. Facts are mined only from the sources you switch on, and the screen shows what was saved and what was not.</p>
+  </div>
+  {{shot:memory}}
+</section>
+
+<section class="stop" id="tape" aria-labelledby="tape-h">
+  <div>
+    <p class="label">The Tape</p>
+    <h2 id="tape-h">One record of every decision and action.</h2>
+    <p>The Tape has no screen of its own: it is a tab in the side panel, live as things happen. Every event has a kind, an actor, a time, and the event that led to it. Nothing is rewritten. When you ask for something to be deleted for good, its events keep their place and lose what they said, and the Tape notes that it happened.</p>
+  </div>
+  {{shot:tape|The Tape, in the side panel's Tape tab, with one event opened.}}
+</section>
+
+<section class="stop" id="apps" aria-labelledby="apps-h">
+  <div>
+    <p class="label">Apps</p>
+    <h2 id="apps-h">Screens, jobs and tools you add.</h2>
+    <p>You read what an app may do before it installs. An update that asks for something new waits for your yes. You can switch an app off or remove it, and removing keeps its data unless you say otherwise.</p>
+    <p class="small"><a class="more" href="/apps.html">The apps</a></p>
+  </div>
+  {{shot:apps}}
+</section>
+
+<section class="stop" id="settings" aria-labelledby="settings-h">
+  <div>
+    <p class="label">Settings</p>
+    <h2 id="settings-h">Everything is a setting.</h2>
+    <p>Anything that could differ between two people is a setting with a plain label and a sensible default, and you can search them. Every setting can also be read and changed as a file, from the screen or the command line, and a set of them can be shared as a profile. No file ever holds a password or a key.</p>
+  </div>
+  {{shot:settings|Settings, Models and roles: the providers you connected, and which model each role uses.}}
+</section>
+
+<section class="stop" id="wall" aria-labelledby="wall-h">
+  <div>
+    <p class="label">The Wall</p>
+    <h2 id="wall-h">A board for a second screen.</h2>
+    <p>Made to be left open on a small screen and read from across the room: the time, what needs you, today's tasks, which models are online, model use, and the newest events. It never scrolls.</p>
+  </div>
+  {{shot:wall}}
+</section>
+
+<section class="stop" id="phone" aria-labelledby="phone-h">
+  <div>
+    <p class="label">Your other devices</p>
+    <h2 id="phone-h">On your phone, over your own network.</h2>
+    <p>JimmyHQ listens on the computer it runs on. To use it from a phone or a laptop, put it on a private network you already trust. Settings, Access can set this up with Tailscale for you, and says exactly what it will run first. Every device still signs in with your password.</p>
+  </div>
+  <div class="phones">{{shot:phone-today}}{{shot:phone-bench}}</div>
+</section>
+
+<section class="sec" id="underneath" aria-labelledby="under-h">
+  <div class="sec-head">
+    <p class="label">Underneath</p>
+    <h2 id="under-h">The parts without a screen of their own.</h2>
+  </div>
+  <div class="grid-3">
+    <div class="panel idea"><p class="label">Models</p><p>Providers on your machine or hosted with your key, {{role_count}} roles with fallbacks, a receipt for every call, and a usage strip. <a href="/#models-h">More</a>.</p></div>
+    <div class="panel idea"><p class="label">Voice</p><p>Dictation in Chat, with a speech engine on your own machine by default. A recording is never written to disk. Spoken commands and replies are not built yet.</p></div>
+    <div class="panel idea"><p class="label">Backups</p><p>To one or two folders you choose, on a schedule, each one checked as it is made and the newest tested in full every week. Restoring is done at the computer, from a terminal.</p></div>
+    <div class="panel idea"><p class="label">Integrations</p><p>An agent may use an outside service, such as a mailbox or a tool server, one action at a time. A request waits on the Bench unless your rule for that action lets it go.</p></div>
+    <div class="panel idea"><p class="label">Web and browser</p><p>A model can search the web and read pages, and an agent can drive a browser of its own, each only once you allow it.</p></div>
+    <div class="panel idea"><p class="label">Other AI apps</p><p>Outside assistants connect over MCP to a small, fixed set of tools, on a port of their own. Off until you switch it on.</p></div>
+    <div class="panel idea"><p class="label">Second machine</p><p>Another computer of yours lends this one its models. Your data and decisions stay where they are.</p></div>
+  </div>
+</section>
+
+<section class="sec" id="status" aria-labelledby="status-h">
+  <div class="sec-head">
+    <p class="label">Where it stands</p>
+    <h2 id="status-h">What is solid, and what is not yet.</h2>
+    <p>From the README's project status, word for word.</p>
+  </div>
+  <div class="panel status-list">
+{{status}}
+  </div>
+</section>

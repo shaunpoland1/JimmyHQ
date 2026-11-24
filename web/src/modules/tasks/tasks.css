@@ -1,0 +1,30 @@
+/* Agent tile colours for the tasks module: teal, plum, ochre, terracotta.
+   The shell does not define agent colour tokens yet; when it does (as
+   --ag-a … --ag-d) they take over and these fallbacks go unused. */
+.task-tile-agent {
+  --ag: var(--ag-a, #2a747a);
+  border: 1px solid color-mix(in srgb, var(--ag) 45%, var(--border));
+  background: color-mix(in srgb, var(--ag) 16%, var(--surface));
+  color: var(--ag);
+}
+.task-tile-agent[data-tone="1"] {
+  --ag: var(--ag-b, #7e5192);
+}
+.task-tile-agent[data-tone="2"] {
+  --ag: var(--ag-c, #8c6010);
+}
+.task-tile-agent[data-tone="3"] {
+  --ag: var(--ag-d, #a64b35);
+}
+:root[data-theme="dark"] .task-tile-agent {
+  --ag: var(--ag-a, #7cc5cb);
+}
+:root[data-theme="dark"] .task-tile-agent[data-tone="1"] {
+  --ag: var(--ag-b, #c7a3d6);
+}
+:root[data-theme="dark"] .task-tile-agent[data-tone="2"] {
+  --ag: var(--ag-c, #e0b45c);
+}
+:root[data-theme="dark"] .task-tile-agent[data-tone="3"] {
+  --ag: var(--ag-d, #e89a83);
+}

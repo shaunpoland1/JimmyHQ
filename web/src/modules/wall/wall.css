@@ -1,0 +1,463 @@
+/* The Wall: a status board read from across the room. Everything is sized in
+   em from one font size, which follows the screen and the number of tiles, so
+   a tile is always about 15 em wide and at least 11 em tall. Colours are the
+   app's tokens only. */
+
+.wall {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-size: clamp(
+    11px,
+    min(calc(100vw / (var(--wall-cols, 3) * 15)), calc(100vh / (var(--wall-rows, 2) * 11))),
+    56px
+  );
+  line-height: 1.35;
+}
+.wall[data-awake="false"] {
+  cursor: none;
+}
+
+.wall-board {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  padding: max(0.5em, 6px);
+  transform: translate(var(--wall-x, 0px), var(--wall-y, 0px));
+  transition: transform 2s ease;
+}
+.wall-row {
+  display: flex;
+  flex: 1 1 0;
+  gap: 0.5em;
+  min-height: 0;
+}
+
+.wall-tile {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0.6em 0.8em 0.65em;
+  border: 1px solid var(--border);
+  border-radius: 0.55em;
+  background: var(--surface);
+}
+.wall-tile[data-tile="clock"] {
+  flex-grow: 1.3;
+}
+
+.wall-lab {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8em;
+  height: 1.9em;
+  margin-bottom: 0.5em;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.62em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.wall-lab h2 {
+  flex: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text);
+}
+.wall-lab-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  min-width: 0;
+}
+.wall-lab-meta > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wall-retry {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1.9em;
+  height: 1.9em;
+  border-radius: 0.4em;
+  color: var(--warning);
+}
+.wall-retry:hover {
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+.wall-body {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  container-type: size;
+}
+
+/* A calm line in the middle of a tile: loading, nothing to show, or a problem. */
+.wall-note {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45em;
+  min-height: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  text-align: center;
+}
+.wall-note[data-tone="calm"] {
+  color: var(--success);
+}
+.wall-note[data-tone="bad"] strong {
+  color: var(--danger);
+}
+.wall-note strong {
+  font-weight: 600;
+}
+.wall-note p {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+.wall-note-detail {
+  font-size: 0.8em;
+}
+.wall-btn {
+  flex: none;
+  padding: 0.25em 0.8em;
+  border: 1px solid var(--border);
+  border-radius: 0.45em;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.8em;
+  font-weight: 500;
+}
+.wall-btn:hover {
+  background: var(--surface-2);
+}
+
+/* ---- clock ---- */
+.wall-clock-box {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
+  container-type: size;
+}
+.wall-clock {
+  /* As large as fits the tile both ways: --clock-em is the text's width in em. */
+  font-family: var(--font-mono);
+  font-size: min(calc(100cqw / var(--clock-em, 3.5)), 56cqh);
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  white-space: nowrap;
+}
+.wall-clock small {
+  margin-left: 0.3em;
+  color: var(--text-muted);
+  font-size: 0.3em;
+  letter-spacing: 0;
+}
+.wall-date {
+  flex: none;
+  margin-top: 0.45em;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 1.15em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- numbers ---- */
+.wall-big {
+  font-family: var(--font-mono);
+  font-size: 2.5em;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.wall-headline {
+  display: flex;
+  flex: none;
+  align-items: baseline;
+  gap: 0.55em;
+  margin-bottom: 0.5em;
+  white-space: nowrap;
+}
+.wall-headline span:last-child {
+  overflow: hidden;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+}
+
+.wall-usage {
+  display: grid;
+  flex: none;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0 0.9em;
+  font-size: 0.85em;
+  line-height: 1.3;
+}
+.wall-usage [role="row"] {
+  display: contents;
+}
+.wall-usage [role="rowheader"],
+.wall-usage [role="columnheader"] {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-weight: 400;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wall-usage [role="columnheader"] {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  letter-spacing: 0.08em;
+  text-align: right;
+  text-transform: uppercase;
+}
+.wall-usage [role="cell"] {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+.wall-usage [data-wide] {
+  grid-column: 2 / span 2;
+}
+.wall-usage [data-rule] {
+  grid-column: 1 / -1;
+  height: 0.3em;
+  margin-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+}
+.wall-share {
+  flex: none;
+  margin-top: 0.8em;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.75em;
+}
+/* The share bar is an extra: it goes when the tile is short. */
+@container (max-height: 9.5em) {
+  .wall-share {
+    display: none;
+  }
+}
+.wall-bar {
+  display: flex;
+  height: 0.6em;
+  margin-bottom: 0.35em;
+  overflow: hidden;
+  border-radius: 0.3em;
+  background: color-mix(in srgb, var(--sage) 45%, transparent);
+}
+.wall-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+/* ---- lists that show what fits ---- */
+.wall-list {
+  flex: 1 1 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+}
+.wall-line {
+  display: flex;
+  align-items: center;
+  gap: 0.55em;
+  box-sizing: border-box;
+  height: 1.8em;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  white-space: nowrap;
+}
+.wall-line:last-child {
+  border-bottom-color: transparent;
+}
+.wall-line > * {
+  flex: none;
+}
+.wall-line .wall-grow {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wall-line .wall-side {
+  max-width: 45%;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.8em;
+  text-overflow: ellipsis;
+}
+.wall-line .wall-side[data-tone="bad"] {
+  color: var(--danger);
+  font-weight: 600;
+}
+.wall-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.wall-line .wall-time {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.75em;
+  font-variant-numeric: tabular-nums;
+}
+.wall-line .wall-kind {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+}
+.wall-line .wall-count {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.wall-line .wall-tag {
+  width: 4.2em;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.62em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.wall-more {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+}
+.wall-line[data-done="true"] .wall-grow {
+  color: var(--text-faint);
+  text-decoration: line-through;
+}
+
+.wall-tick {
+  display: inline-grid;
+  place-items: center;
+  width: 1em;
+  height: 1em;
+  border: 0.12em solid var(--sage);
+  border-radius: 9999px;
+  color: transparent;
+}
+.wall-line[data-done="true"] .wall-tick {
+  border-color: var(--success);
+  background: var(--success);
+  color: var(--surface);
+}
+.wall-tick svg {
+  width: 0.65em;
+  height: 0.65em;
+}
+
+.wall-dot {
+  width: 0.6em;
+  height: 0.6em;
+  border-radius: 9999px;
+  background: var(--sage);
+}
+.wall-dot[data-state="online"] {
+  background: var(--success);
+}
+.wall-dot[data-state="offline"] {
+  background: var(--danger);
+}
+
+/* ---- the marker and the controls, out of the way ---- */
+.wall-marker {
+  position: absolute;
+  bottom: max(0.9em, 10px);
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.25em 0.8em;
+  transform: translateX(-50%);
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  color: var(--text-muted);
+  font-size: max(0.7em, 11px);
+  white-space: nowrap;
+}
+.wall-marker .wall-dot {
+  background: var(--warning);
+  animation: wall-pulse 1.6s ease-in-out infinite;
+}
+@keyframes wall-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.wall-controls {
+  position: absolute;
+  top: max(0.9em, 10px);
+  right: max(0.9em, 10px);
+  z-index: 3;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.wall[data-awake="true"] .wall-controls,
+.wall-controls:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Buttons sit inside clipped tiles: keep the focus ring inside their own edge. */
+.wall-btn:focus-visible,
+.wall-retry:focus-visible {
+  outline-offset: -2px;
+}
+
+/* Someone who asked for less motion gets none: the shift still protects the panel. */
+@media (prefers-reduced-motion: reduce) {
+  .wall-board,
+  .wall-controls {
+    transition: none;
+  }
+  .wall-marker .wall-dot {
+    animation: none;
+  }
+}

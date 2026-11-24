@@ -1,0 +1,37 @@
+/* The filer tile: a tinted square with a coloured letter for an agent, a round
+   accent tile for the owner. The four agent colours are the design's (teal,
+   plum, ochre, terracotta); they are the shared --ag-a to --ag-d tokens. */
+
+.bench-tile {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.bench-tile[data-tone] {
+  border-color: color-mix(in srgb, var(--bench-tone) 45%, var(--border));
+  background: color-mix(in srgb, var(--bench-tone) 16%, var(--surface));
+  color: var(--bench-tone);
+}
+
+.bench-tile[data-tone="0"] { --bench-tone: var(--ag-a); }
+.bench-tile[data-tone="1"] { --bench-tone: var(--ag-b); }
+.bench-tile[data-tone="2"] { --bench-tone: var(--ag-c); }
+.bench-tile[data-tone="3"] { --bench-tone: var(--ag-d); }
+
+.bench-tile[data-owner] {
+  border-color: var(--accent);
+  border-radius: 9999px;
+  background: var(--accent);
+  color: var(--accent-fg);
+}

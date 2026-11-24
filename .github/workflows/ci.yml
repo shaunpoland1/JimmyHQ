@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer push to a pull request replaces its older run. A run on main is never cut
+# short: it is the only place macOS and Windows are tested, and merges come close together.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  server:
+    name: Server (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # A pull request waits only for Linux, which takes minutes. macOS and Windows
+        # (the job below) run on main after each merge, and by hand from the Actions tab.
+        os: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu-latest"]' || '["ubuntu-latest", "macos-latest"]') }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      # One job also installs the speech add-ons, so the tests that run the real audio
+      # decoders (tests/test_speech_real_decode.py) are not skipped everywhere.
+      - run: uv sync --locked ${{ matrix.os == 'ubuntu-latest' && '--extra speech --extra speech-parakeet' || '' }}
+      - run: uv run ruff check
+      - run: uv run pytest -n auto
+
+  # Windows runs the suite without worker processes: starting them there costs more than
+  # it saves, and the load trips the one test that checks a time limit. One run of
+  # everything takes an hour, so the suite is cut into parts that run side by side. Every
+  # tests/test_*.py file belongs to exactly one part, and every pattern matches a file
+  # (tests/test_ci_parts.py checks both: a pattern that matches nothing makes pytest stop).
+  # The a tests are cut in two by file name, at `test_apps_o`: on one machine about 100 s
+  # of them come before it and 90 s from it on.
+  server-windows:
+    name: Server (windows-latest, ${{ matrix.part.name }})
+    if: github.event_name != 'pull_request'
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        part:
+          - {name: "tests a to apps n", paths: "tests/test_a[!p]*.py tests/test_apps_[a-n]*.py"}
+          - {name: "tests apps o to z", paths: "tests/test_apps_[o-z]*.py"}
+          - {name: "tests b to m", paths: "tests/test_[b-m]*.py"}
+          - {name: "tests n to z", paths: "tests/test_[!a-m]*.py"}
+          - {name: "apps", paths: "apps"}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff check
+      - run: uv run pytest ${{ matrix.part.paths }}
+
+  web:
+    name: Web
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # The step above reads the commits of this change. This one reads every file as it
+      # stands, which is what a published copy of the repository holds.
+      - name: Scan every file as it stands
+        run: >
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest
+          detect --no-git --redact --verbose --no-banner --source /repo

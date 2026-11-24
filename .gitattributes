@@ -1,0 +1,6 @@
+# Text files are checked out with the same line endings on every system, so an app's
+# files, and the hashes taken of them, are the same on Windows as elsewhere.
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.woff2 binary

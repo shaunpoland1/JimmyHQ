@@ -1,0 +1,559 @@
+[
+ {
+  "name": "a first run with no site shows a hint that is not counted",
+  "data": {
+   "sites": [],
+   "pieces": [],
+   "ideas": [],
+   "replies": {
+    "replies": 0,
+    "unread": 0,
+    "hint": ""
+   }
+  },
+  "waiting": 0
+ },
+ {
+  "name": "an article that is ready counts once and one still being written does not",
+  "data": {
+   "now_ms": 1800000000000,
+   "sites": [
+    {
+     "id": 1,
+     "name": "Garden journal",
+     "sends_out": false
+    }
+   ],
+   "pieces": [
+    {
+     "id": 1,
+     "site_id": 1,
+     "way": "link",
+     "origin": "",
+     "topic": "t",
+     "angle": "",
+     "state": "ready",
+     "error": "",
+     "created": 1,
+     "updated": 1,
+     "revision": 1,
+     "title": "Piece 1",
+     "words": "",
+     "ways_out": "",
+     "close": null,
+     "questions": 0,
+     "warnings": 0,
+     "sources": 1,
+     "attempt": null
+    },
+    {
+     "id": 2,
+     "site_id": 1,
+     "way": "link",
+     "origin": "",
+     "topic": "t",
+     "angle": "",
+     "state": "writing",
+     "error": "",
+     "created": 2,
+     "updated": 2,
+     "revision": 1,
+     "title": "Piece 2",
+     "words": "",
+     "ways_out": "",
+     "close": null,
+     "questions": 0,
+     "warnings": 0,
+     "sources": 1,
+     "attempt": null
+    },
+    {
+     "id": 3,
+     "site_id": 1,
+     "way": "link",
+     "origin": "",
+     "topic": "t",
+     "angle": "",
+     "state": "researching",
+     "error": "",
+     "created": 3,
+     "updated": 3,
+     "revision": 1,
+     "title": "Piece 3",
+     "words": "",
+     "ways_out": "",
+     "close": null,
+     "questions": 0,
+     "warnings": 0,
+     "sources": 1,
+     "attempt": null
+    }
+   ],
+   "ideas": [],
+   "replies": {
+    "replies": 0,
+    "unread": 0,
+    "hint": ""
+   }
+  },
+  "waiting": 1
+ },
+ {
+  "name": "articles done with count nothing",
+  "data": {
+   "now_ms": 1800000000000,
+   "sites": [
+    {
+     "id": 1,
+     "name": "Garden journal",
+     "sends_out": false
+    }
+   ],
+   "pieces": [
+    {
+     "id": 1,
+     "site_id": 1,
+     "way": "link",
+     "origin": "",
+     "topic": "t",
+     "angle": "",
+     "state": "published",
+     "error": "",
+     "created": 1,
+     "updated": 1,
+     "revision": 1,
+     "title": "Piece 1",
+     "words": "",
+     "ways_out": "",
+     "close": null,
+     "questions": 0,
+     "warnings": 0,
+     "sources": 1,
+     "attempt": null
+    },
+    {
+     "id": 2,
+     "site_id": 1,
+     "way": "link",
+     "origin": "",
+     "topic": "t",
+     "angle": "",
+     "state": "declined",
+     "error": "",
+     "created": 2,
+     "updated": 2,
+     "revision": 1,
+     "title": "Piece 2",
+     "words": "",
+     "ways_out": "",
+     "close": null,
+     "questions": 0,
+     "warnings": 0,
+     "sources": 1,
+     "attempt": null
+    },
+    {
+     "id": 3,
+     "site_id": 1,
+     "way": "link",
+     "origin": "",
+     "topic": "t",
+     "angle": "",
+     "state": "dropped",
+     "error": "",
+     "created": 3,
+     "updated": 3,
+     "revision": 1,
+     "title": "Piece 3",
+     "words": "",
+     "ways_out": "",
+     "close": null,
+     "questions": 0,
+     "warnings": 0,
+     "sources": 1,
+     "attempt": null
+    }
+   ],
+   "ideas": [],
+   "replies": {
+    "replies": 0,
+    "unread": 0,
+    "hint": ""
+   }
+  },
+  "waiting": 0
+ },
+ {
+  "name": "every held or stuck state counts a line",
+  "data": {
+   "now_ms": 1800000000000,
+   "sites": [
+    {
+     "id": 1,
+     "name": "Garden journal",
+     "sends_out": false
+    }
+   ],
+   "pieces": [
+    {
+     "id": 1,
+     "site_id": 1,
+     "way": "link",
+     "origin": "",
+     "topic": "t",
+     "angle": "",
+     "state": "unsure",
+     "error": "",
+     "created": 1,
+     "updated": 1,
+     "revision": 1,
+     "title": "Piece 1",
+     "words": "",
+     "ways_out": "",
+     "close": null,
+     "questions": 0,
+     "warnings": 0,
+     "sources": 1,
+     "attempt": null
+    },
+    {
+     "id": 2,
+     "site_id": 1,
+     "way": "link",
+     "origin": "",
+     "topic": "t",
+     "angle": "",
+     "state": "held_coverage",
+     "error": "",
+     "created": 2,
+     "updated": 2,
+     "revision": 1,
+     "title": "Piece 2",
+     "words": "",
+     "ways_out": "",
+     "close": null,
+     "questions": 0,
+     "warnings": 0,
+     "sources": 1,
+     "attempt": null
+    },
+    {
+     "id": 3,
+     "site_id": 1,
+     "way": "link",
+     "origin": "",
+     "topic": "t",
+     "angle": "",
+     "state": "stopped_research",
+     "error": "",
+     "created": 3,
+     "updated": 3,
+     "revision": 1,
+     "title": "Piece 3",
+     "words": "",
+     "ways_out": "",
+     "close": null,
+     "questions": 0,
+     "warnings": 0,
+     "sources": 1,
+     "attempt": null
+    },
+    {
+     "id": 4,
+     "site_id": 1,
+     "way": "link",
+     "origin": "",
+     "topic": "t",
+     "angle": "",
+     "state": "stalled",
+     "error": "",
+     "created": 4,
+     "updated": 4,
+     "revision": 1,
+     "title": "Piece 4",
+     "words": "",
+     "ways_out": "",
+     "close": null,
+     "questions": 0,
+     "warnings": 0,
+     "sources": 1,
+     "attempt": null
+    },
+    {
+     "id": 5,
+     "site_id": 1,
+     "way": "link",
+     "origin": "",
+     "topic": "t",
+     "angle": "",
+     "state": "approved",
+     "error": "",
+     "created": 5,
+     "updated": 5,
+     "revision": 1,
+     "title": "Piece 5",
+     "words": "",
+     "ways_out": "",
+     "close": null,
+     "questions": 0,
+     "warnings": 0,
+     "sources": 1,
+     "attempt": null
+    },
+    {
+     "id": 6,
+     "site_id": 1,
+     "way": "link",
+     "origin": "",
+     "topic": "t",
+     "angle": "",
+     "state": "sent",
+     "error": "",
+     "created": 6,
+     "updated": 6,
+     "revision": 1,
+     "title": "Piece 6",
+     "words": "",
+     "ways_out": "",
+     "close": null,
+     "questions": 0,
+     "warnings": 0,
+     "sources": 1,
+     "attempt": null
+    }
+   ],
+   "ideas": [],
+   "replies": {
+    "replies": 0,
+    "unread": 0,
+    "hint": ""
+   }
+  },
+  "waiting": 6
+ },
+ {
+  "name": "an article being published counts nothing yet",
+  "data": {
+   "now_ms": 1800000000000,
+   "sites": [
+    {
+     "id": 1,
+     "name": "Garden journal",
+     "sends_out": false
+    }
+   ],
+   "pieces": [
+    {
+     "id": 1,
+     "site_id": 1,
+     "way": "link",
+     "origin": "",
+     "topic": "t",
+     "angle": "",
+     "state": "publishing",
+     "error": "",
+     "created": 1,
+     "updated": 1,
+     "revision": 1,
+     "title": "Piece 1",
+     "words": "",
+     "ways_out": "",
+     "close": null,
+     "questions": 0,
+     "warnings": 0,
+     "sources": 1,
+     "attempt": null
+    }
+   ],
+   "ideas": [],
+   "replies": {
+    "replies": 0,
+    "unread": 0,
+    "hint": ""
+   }
+  },
+  "waiting": 0
+ },
+ {
+  "name": "waiting ideas count one line however many there are",
+  "data": {
+   "now_ms": 1800000000000,
+   "sites": [
+    {
+     "id": 1,
+     "name": "Garden journal",
+     "sends_out": false
+    }
+   ],
+   "pieces": [],
+   "ideas": [
+    {
+     "id": 1,
+     "title": "Idea 1",
+     "angle": "",
+     "why": "",
+     "audience": "",
+     "replies": 2
+    },
+    {
+     "id": 2,
+     "title": "Idea 2",
+     "angle": "",
+     "why": "",
+     "audience": "",
+     "replies": 2
+    },
+    {
+     "id": 3,
+     "title": "Idea 3",
+     "angle": "",
+     "why": "",
+     "audience": "",
+     "replies": 2
+    }
+   ],
+   "replies": {
+    "replies": 0,
+    "unread": 0,
+    "hint": ""
+   }
+  },
+  "waiting": 1
+ },
+ {
+  "name": "replies not looked at count one line however many there are",
+  "data": {
+   "now_ms": 1800000000000,
+   "sites": [
+    {
+     "id": 1,
+     "name": "Garden journal",
+     "sends_out": false
+    }
+   ],
+   "pieces": [],
+   "ideas": [],
+   "replies": {
+    "replies": 9,
+    "unread": 9,
+    "hint": ""
+   }
+  },
+  "waiting": 1
+ },
+ {
+  "name": "replies already looked at count nothing",
+  "data": {
+   "now_ms": 1800000000000,
+   "sites": [
+    {
+     "id": 1,
+     "name": "Garden journal",
+     "sends_out": false
+    }
+   ],
+   "pieces": [],
+   "ideas": [],
+   "replies": {
+    "replies": 9,
+    "unread": 0,
+    "hint": ""
+   }
+  },
+  "waiting": 0
+ },
+ {
+  "name": "everything at once adds up",
+  "data": {
+   "now_ms": 1800000000000,
+   "sites": [
+    {
+     "id": 1,
+     "name": "Garden journal",
+     "sends_out": false
+    }
+   ],
+   "pieces": [
+    {
+     "id": 1,
+     "site_id": 1,
+     "way": "link",
+     "origin": "",
+     "topic": "t",
+     "angle": "",
+     "state": "ready",
+     "error": "",
+     "created": 1,
+     "updated": 1,
+     "revision": 1,
+     "title": "Piece 1",
+     "words": "",
+     "ways_out": "",
+     "close": null,
+     "questions": 0,
+     "warnings": 0,
+     "sources": 1,
+     "attempt": null
+    },
+    {
+     "id": 2,
+     "site_id": 1,
+     "way": "link",
+     "origin": "",
+     "topic": "t",
+     "angle": "",
+     "state": "ready",
+     "error": "",
+     "created": 2,
+     "updated": 2,
+     "revision": 1,
+     "title": "Piece 2",
+     "words": "",
+     "ways_out": "",
+     "close": null,
+     "questions": 0,
+     "warnings": 0,
+     "sources": 1,
+     "attempt": null
+    },
+    {
+     "id": 3,
+     "site_id": 1,
+     "way": "link",
+     "origin": "",
+     "topic": "t",
+     "angle": "",
+     "state": "stalled",
+     "error": "",
+     "created": 3,
+     "updated": 3,
+     "revision": 1,
+     "title": "Piece 3",
+     "words": "",
+     "ways_out": "",
+     "close": null,
+     "questions": 0,
+     "warnings": 0,
+     "sources": 1,
+     "attempt": null
+    }
+   ],
+   "ideas": [
+    {
+     "id": 1,
+     "title": "Idea 1",
+     "angle": "",
+     "why": "",
+     "audience": "",
+     "replies": 2
+    }
+   ],
+   "replies": {
+    "replies": 4,
+    "unread": 2,
+    "hint": ""
+   }
+  },
+  "waiting": 5
+ }
+]

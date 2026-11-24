@@ -1,0 +1,41 @@
+{
+  "manifest": 1,
+  "id": "chores",
+  "name": "Chores",
+  "summary": "A small board for the jobs around the house.",
+  "author": "The JimmyHQ project",
+  "licence": "Apache-2.0",
+  "version": "1.0.0",
+  "tier": "sandboxed",
+  "api": "1.0",
+  "permissions": [],
+  "screens": [{"id": "main", "label": "Chores", "entry": "described"}],
+  "tables": {
+    "room": {
+      "label": "Rooms",
+      "fields": {"name": {"type": "text", "label": "Name", "required": true}}
+    },
+    "chore": {
+      "label": "Chores",
+      "fields": {
+        "title": {"type": "text", "label": "Chore", "required": true},
+        "state": {"type": "choice", "label": "State", "options": ["to do", "doing", "done"], "required": true},
+        "room": {"type": "link", "label": "Room", "table": "room"},
+        "due": {"type": "date", "label": "Due"},
+        "minutes": {"type": "int", "label": "Minutes", "min": 1, "max": 600},
+        "cost": {"type": "money", "label": "Cost", "currency": "EUR", "min": 0},
+        "repeats": {"type": "bool", "label": "Repeats"}
+      }
+    }
+  },
+  "views": [
+    {"id": "board", "label": "Board", "table": "chore", "group": "state",
+     "fields": ["title", "room", "due", "minutes"], "sort": ["due", "title"],
+     "totals": {"minutes": "sum"}},
+    {"id": "open", "label": "Still to do", "table": "chore",
+     "filter": [{"field": "state", "op": "ne", "value": "done"}],
+     "fields": ["title", "state", "room", "due"], "sort": ["due", "title"],
+     "totals": {"minutes": "sum", "cost": "sum"}},
+    {"id": "rooms", "label": "Rooms", "table": "room", "sort": ["name"]}
+  ]
+}
