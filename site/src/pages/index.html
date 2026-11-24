@@ -1,11 +1,11 @@
 <!--
-title: JimmyHQ: bring the model you want, put it to work on what you need done
+title: JimmyHQ: bring the models you want, put them to work on what you need done
 description: An open-source headquarters that runs on your own computer. Bring the models you want, give each role its model, and agents and apps put them to work. Every decision waits for your click and goes on one record.
 class: page home
 -->
 <section class="hero" aria-labelledby="hero-h">
-  <p class="label">Open source · runs on your computer · early</p>
-  <h1 id="hero-h"><span>Bring the model you want.</span> <span>Put it to work on what you need done.</span></h1>
+  <p class="label">Open source · runs on your own machines · early</p>
+  <h1 id="hero-h"><span>Bring the models you want.</span> <span>Put them to work on what you need done.</span></h1>
   <p class="lede">JimmyHQ runs on your own computer and opens in your browser. Bring a model on your machine, through {{providers:local}}, or a hosted one from {{providers:hosted}} with your own key. Give each role the model you choose, and JimmyHQ's agents and apps put them to work. When something is ready to go out, it waits on the Bench for your click.</p>
   <div class="actions">
     <a class="btn btn-primary" href="/get-started.html">Get started</a>
@@ -102,11 +102,13 @@ class: page home
 </section>
 
 <section class="sec" aria-labelledby="models-h">
+  <div class="sec-head models-head">
+    <p class="label">Bring your own models</p>
+    <h2 id="models-h">You choose the model for each job.</h2>
+    <p class="lede">JimmyHQ does not come with a model or an account of its own. You add the ones you want, and give each of the {{role_count}} roles a first choice and fallbacks. Every part of JimmyHQ asks for a role, and no model name is written into the code.</p>
+  </div>
   <div class="models">
     <div>
-      <p class="label">Bring your own models</p>
-      <h2 id="models-h">You choose the model for each job.</h2>
-      <p class="lede">JimmyHQ does not come with a model or an account of its own. You add the ones you want, and give each of the {{role_count}} roles a first choice and fallbacks. Every part of JimmyHQ asks for a role, and no model name is written into the code.</p>
       <div class="where">
         <div class="panel"><p class="label">On your machine</p><p>Any server that speaks the OpenAI-compatible API, such as {{providers:local}}. Or a second computer of yours, with a graphics card, that lends its models.</p></div>
         <div class="panel"><p class="label">Hosted, with your own key</p><p>{{providers:hosted}}. Your own model is used first, and the screen says when a hosted one answers.</p></div>
@@ -117,6 +119,20 @@ class: page home
       <p class="roles-note">The roles as the Models screen lists them. A role you leave empty uses the default role's models, except embeddings.</p>
     </div>
   </div>
+</section>
+
+<section class="sec" aria-labelledby="mcp-h">
+  <div class="sec-head">
+    <p class="label">MCP, both ways</p>
+    <h2 id="mcp-h">It works with the AI apps and tools you already use.</h2>
+    <p>JimmyHQ speaks the Model Context Protocol (MCP) in both directions. It is an MCP server other assistants can connect to, and its agents can use the MCP servers you add.</p>
+  </div>
+  <div class="grid-3">
+    <div class="panel idea"><p class="label">In: the MCP door</p><h3>Your other assistants can reach your headquarters.</h3><p>An assistant or agent platform that speaks MCP can talk to your agents, file a card on your Bench, add and list tasks, and search the shared part of memory. It can never decide a card or change a setting: there is no tool for it.</p></div>
+    <div class="panel idea"><p class="label">Out: MCP servers</p><h3>Your agents can use any MCP server.</h3><p>Add a server, a program on your machine or one at an address, and each tool it lists becomes an action your agents can ask for. A request waits on the Bench unless your rule for that one action lets it go.</p></div>
+    <div class="panel idea"><p class="label">On your terms</p><h3>Off until you switch it on.</h3><p>The door has a port of its own that answers nothing else. You name each client, it has its own token and a daily limit for each tool, and it can use no tool until you allow it. What it sends is data, never instructions, and every call goes on the Tape.</p></div>
+  </div>
+  <p class="small"><a class="more" href="{{code:docs/door.md}}" rel="noopener">The MCP door</a> &nbsp; <a class="more" href="{{code:docs/hands.md}}" rel="noopener">Integrations and MCP servers</a></p>
 </section>
 
 <section class="sec" aria-labelledby="ideas-h">

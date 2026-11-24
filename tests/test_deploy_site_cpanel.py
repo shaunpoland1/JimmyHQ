@@ -119,6 +119,29 @@ def test_every_file_goes_to_its_own_folder_with_the_htaccess_beside_the_pages(pa
     assert "RewriteEngine Off" in tool.HTACCESS  # a parent folder's rules stay out
 
 
+def test_files_a_newer_build_dropped_are_moved_aside_and_nothing_else_is_touched(panel, fake,
+                                                                                    dist):
+    (dist / "assets" / "fonts").mkdir()
+    (dist / "assets" / "fonts" / "a.woff2").write_text("x", encoding="utf-8")
+    tool.upload_site(panel, dist, "public_html", say=lambda _: None)
+    mine = dict(fake.files)
+    others = {"public_html/old-page.html": b"o", "public_html/shots/gone.png": b"o",
+              "public_html/notes.txt": b"keep", "public_html/site_new/x.html": b"keep",
+              "public_html/.well-known/t": b"keep"}
+    fake.files.update(others)
+    dropped = tool.clear_dropped(panel, "/srv/acct", dist, "public_html", "7",
+                                 say=lambda _: None)
+    assert dropped == ["public_html/old-page.html", "public_html/shots/gone.png"]
+    assert fake.files["site_dropped_7/old-page.html"] == b"o"
+    assert fake.files["site_dropped_7/shots/gone.png"] == b"o"
+    for name, data in {**mine, **{k: v for k, v in others.items() if v == b"keep"}}.items():
+        assert fake.files[name] == data
+    assert not any(r.url.path.endswith(("delete_file", "trash_file")) for r in fake.seen)
+    assert tool.clear_dropped(panel, "/srv/acct", dist, "public_html", "8",
+                              say=lambda _: None) == []
+    assert not any(name.startswith("site_dropped_8") for name in fake.files)
+
+
 def test_many_or_large_files_are_sent_in_several_requests(tmp_path, monkeypatch):
     paths = []
     for n in range(20):

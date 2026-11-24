@@ -5,15 +5,16 @@
 <h1 align="center">JimmyHQ</h1>
 
 <p align="center">
-  Bring the model you want. Put it to work on what you need done.
-  Open source, on your own computer.
+  Bring the models you want. Put them to work on what you need done.
+  Open source, on your own machines.
 </p>
 
 <p align="center">
   Version <!-- version:start -->0.1.0<!-- version:end --> · early development · Apache-2.0
 </p>
 
-JimmyHQ is a local-first platform that runs on your own computer and opens in your browser. It
+JimmyHQ is a local-first platform that runs on your own machines and opens in your browser. One
+computer is enough; a second one, such as a box with a graphics card, can lend it its models. It
 gives one person a single place for their tasks, their notes and memory, their AI models and
 the agents that work for them, and it brings every decision back to you to approve.
 
@@ -191,8 +192,16 @@ More: [Speech](docs/speech.md).
 ### The Wall
 
 A status board for a second screen, at `/wall`: clock, usage, the Bench, today's tasks, model
-health and the live Tape. It needs no pointer, never scrolls and fills the screen. It has
-settings for the tiles, a 24-hour clock and burn-in protection, and a kiosk recipe.
+health and the live Tape. It needs no pointer, never scrolls and fills the screen.
+
+It is made for a small screen left on all day: a little panel on a desk or a shelf, run by a
+spare computer or a single-board one, as the home base that shows what JimmyHQ is doing. The
+guide has a kiosk recipe for that.
+
+The picture below is one arrangement, not the only one. In Settings you choose which tiles
+it shows and in what order, how many lines each list gets, a 12 or 24-hour clock, whether it
+stays dark, and burn-in protection. The layout and the size of the type follow the shape of
+the screen.
 
 <p align="center">
   <img src="docs/screenshots/wall.png" alt="The Wall: a clock, usage, the Bench count, today's tasks, models and the live Tape" width="900">

@@ -349,6 +349,8 @@ pre .c { color: var(--text-faint); }
 
 .models { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 2.5rem; align-items: start; }
 .models .lede { margin-bottom: 1rem; }
+.models-head .lede { max-width: none; }
+.models .where:first-child { margin-top: 0; }
 .models h2 { margin-bottom: 0.75rem; }
 .roles { margin: 0; padding: 0; list-style: none; max-width: none; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
 .roles li { display: flex; align-items: baseline; gap: 1rem; margin: 0; padding: 0.6rem 0.9rem; border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
@@ -459,6 +461,10 @@ pre .c { color: var(--text-faint); }
 .kinds h3 { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; }
 .kinds + p { margin-top: 0.85rem; }
 .grid-2 h3 { margin-bottom: 0.35rem; }
+/* Good to know: title, sentence and command share rows, so the command boxes line up */
+.know > div { display: grid; grid-template-rows: subgrid; grid-row: span 3; row-gap: 0; align-content: start; }
+.know > div > * { min-width: 0; }
+.know > div > ul { grid-row: span 2; }
 .ledger + p { margin-top: 1.25rem; }
 .kinds p { margin: 0; color: var(--text-muted); font-size: 14px; }
 

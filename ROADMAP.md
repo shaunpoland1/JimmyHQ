@@ -25,6 +25,9 @@ What is being worked on, in order. The dev log (`CHANGELOG.md`) says what has sh
   takes a quick note or task in plain words.
 - **Install a set.** Several apps that ship with JimmyHQ installed together, with one
   confirmation.
+- **An app store, and a way to submit to it.** What a listing shows, how someone sends in
+  an app they made, and how a full app is reviewed before it is listed. The design comes
+  first, so that people can start submitting soon after.
 - **Chat with agents.** The same Chat screen for your models and your agents.
 - **Voice.** Spoken commands and spoken replies.
 
@@ -35,7 +38,6 @@ What is being worked on, in order. The dev log (`CHANGELOG.md`) says what has sh
 - **A day thread.** One timeline of today across every app, with decisions inline.
 - **A weekly review** the system writes: what came in, what it did alone, what is stuck.
 - **Agents that own a project** end to end, with a budget of approvals they may spend.
-- **An app store**, with a review of full apps before they are listed.
 - **A no-code app builder**: describe an app in chat and get one that keeps and shows
   records.
 - **A development workspace** for building apps from inside JimmyHQ.

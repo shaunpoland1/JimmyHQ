@@ -228,6 +228,35 @@ def upload_site(panel: CPanel, dist: Path, folder: str, say=print) -> int:
     return count + 1
 
 
+def clear_dropped(panel: CPanel, home: str, dist: Path, folder: str, stamp: str,
+                  say=print) -> list[str]:
+    """Move aside what an earlier build left in ``folder`` and this build no longer has.
+    Only the site's own places are looked at: the pages at the top, and the folders the
+    build makes (such as assets and shots). Nothing is deleted; the files go to a folder
+    named site_dropped_… in the home folder."""
+    holding, dropped = f"site_dropped_{stamp}", []
+    by_folder = site_files(dist)
+    for sub, paths in by_folder.items():
+        here = f"{folder}/{sub}".rstrip("/")
+        # the files the build has here, and the folders it has inside this one
+        built = {p.name for p in paths} | {
+            other[len(sub):].strip("/").split("/")[0]
+            for other in by_folder if other != sub and (not sub or other.startswith(sub + "/"))}
+        stale = [n for n in panel.entries(here)
+                 if n not in built and (sub or n.endswith(".html"))]
+        if not stale:
+            continue
+        into = f"{holding}/{sub}".rstrip("/")
+        panel.upload(into, [("ABOUT.txt", f"Moved out of {here} by the site deploy: the "
+                                           "newer site no longer has these.\n".encode())])
+        for name in stale:
+            panel.move(f"{home}/{here}/{name}", f"{home}/{into}")
+            dropped.append(f"{here}/{name}")
+    if dropped:
+        say(f"  moved {len(dropped)} file(s) the site no longer has into {holding}")
+    return dropped
+
+
 STAYS = {".well-known", "cgi-bin"}
 
 
@@ -324,6 +353,7 @@ def main(argv: list[str] | None = None) -> int:
                 folder = found["documentroot"].removeprefix(found["homedir"]).strip("/")
                 print(f"It is served from the folder {folder!r}.")
                 count = upload_site(panel, args.dist, folder)
+                clear_dropped(panel, found["homedir"].rstrip("/"), args.dist, folder, stamp())
                 # A preview is for looking at, not for search engines to list.
                 panel.upload(folder, [("robots.txt", b"User-agent: *\nDisallow: /\n")])
                 print(f"Uploaded {count} files. Look at https://{name}/ (its certificate "
@@ -345,6 +375,8 @@ def main(argv: list[str] | None = None) -> int:
                 if not args.dir:
                     raise Stop("Say which folder with --dir.")
                 count = upload_site(panel, args.dist, args.dir)
+                home = panel.domain(args.host)["homedir"].rstrip("/")
+                clear_dropped(panel, home, args.dist, args.dir.strip("/"), stamp())
                 print(f"Uploaded {count} files into {args.dir!r}.")
         finally:
             panel.close()

@@ -91,3 +91,17 @@ behind CloudFront:
   response headers.
 
 Build with `--strict` before a deploy.
+
+## The social card
+
+`src/assets/social.png` is the picture shown when a link to the site is shared. Its source
+is `social-card.html`, which uses the site's own stylesheet. To remake it after the headline
+changes, serve the built site and take a 1200 by 630 picture in the dark theme:
+
+```bash
+cd site/dist && python3 -m http.server 8000 --bind 127.0.0.1
+```
+
+```bash
+chrome --headless=new --hide-scrollbars --force-dark-mode --window-size=1200,630 --screenshot=site/src/assets/social.png site/social-card.html
+```

@@ -102,6 +102,10 @@ uv run python site/build.py --strict
 
 The pages are written to `site/dist/`. Putting them on the web is step 10.
 
+If you publish from a snapshot that leaves some files out (see `.publicignore`), the site
+that goes on the web must be built again inside that public copy, after step 9. A site built
+here would list apps and pictures the public repository does not have.
+
 ## 8. Build and commit
 
 ```bash
@@ -160,6 +164,10 @@ notes from the dev log entry.
 uv run python scripts/deploy_site_cpanel.py preview --host example.org --subdomain new
 uv run python scripts/deploy_site_cpanel.py upload --host example.org --dir public_html
 ```
+
+Add `--dist <public copy>/site/dist` to send the site built in the public copy. After an
+upload, files an earlier build left behind and this one no longer has are moved into a
+`site_dropped_…` folder in the account's home folder. Nothing is deleted.
 
 Then tell people. A release worth announcing gets a short post written from its dev log
 entry: what is new, in plain words, with a link to the code and to the website.
