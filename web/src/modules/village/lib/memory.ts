@@ -42,7 +42,7 @@ const PROVENANCE: Record<string, Provenance> = {
   owner: { label: "From you", help: "It cites something you said to it in chat.", trust: "checked" },
   seen: { label: "Seen in its own actions", help: "It cites what it did, what it was refused, or what you decided on the Bench.", trust: "checked" },
   village: { label: "From the village's news", help: "It rests on the village's own notes about what changed.", trust: "checked" },
-  "web:unconfirmed": { label: "From the web, unconfirmed", help: "It came from a page on the web and nobody has confirmed it. Treat it as a lead, not a fact.", trust: "unchecked" },
+  "web:unconfirmed": { label: "From outside, unconfirmed", help: "It came from a web page, an integration or an outside message, and nobody has confirmed it. Treat it as a lead, not a fact.", trust: "unchecked" },
   "self-reported": { label: "Its own account, not checked", help: "The agent's own word, backed by nothing in the record. It is told so whenever it reads the line.", trust: "unchecked" },
 };
 

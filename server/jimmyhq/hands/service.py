@@ -352,13 +352,22 @@ class Hands:
         self.store.forget_account(slug)
         return known or had_connect
 
-    async def actions(self, slug: str, *, refresh: bool = False) -> list[Action]:
+    async def actions(self, slug: str, *, refresh: bool = False,
+                      within_ms: int | None = None) -> list[Action]:
         """What an account can do. Remembered for ``hands.actions_cache_s``; if the
-        provider cannot be asked, the last list known is used."""
+        provider cannot be asked, the last list known is used.
+
+        With ``within_ms``, a list older than that is never used: the provider is asked
+        again, and if it cannot be asked this raises ``NotReady`` (see ``actions_now``)."""
         cached = self.store.actions(slug)
         fresh_for = int(self.core.settings.get("hands.actions_cache_s")) * 1000
-        if cached and not refresh and self.now() - cached[1] < fresh_for:
+        strict = within_ms is not None
+        if strict:
+            fresh_for = min(fresh_for, max(0, int(within_ms)))
+        age = self.now() - cached[1] if cached else None
+        if cached and not refresh and 0 <= age < fresh_for:
             return [Action.from_dict(a) for a in cached[0]]
+        stale = cached if cached and not strict else None
         account = self.account(slug)
         try:
             if account is None:
@@ -366,13 +375,13 @@ class Hands:
             provider = self.adapter(account["provider_id"])
             found = await provider.actions(self.provider_account(slug))
         except NotReady:
-            if cached and account is not None:
-                return [Action.from_dict(a) for a in cached[0]]
+            if stale and account is not None:
+                return [Action.from_dict(a) for a in stale[0]]
             raise
         except Exception as exc:  # noqa: BLE001 - an adapter's fault is an answer here
             log.warning("listing an account's actions failed: %s", type(exc).__name__)
-            if cached:
-                return [Action.from_dict(a) for a in cached[0]]
+            if stale:
+                return [Action.from_dict(a) for a in stale[0]]
             raise NotReady("unreachable", "The provider could not be asked what this "
                                           "account can do. Try again later.") from None
         undo = can_undo(provider)
@@ -380,6 +389,16 @@ class Hands:
                  for a in found]
         self.store.set_actions(slug, [a.as_dict() for a in found], self.now())
         return found
+
+    async def actions_now(self, slug: str) -> list[Action]:
+        """Rule ``hand_checked_fresh_before_running``: the list of actions as the
+        provider gives it now, for a call that is about to go out. A list kept longer
+        than ``hands.actions_check_s`` is not trusted, and when the provider cannot be
+        asked this raises ``NotReady`` instead of falling back on an old list: an
+        action that changed at its provider must not run under the owner's old review.
+        Offering tools keeps the long cache (``actions``)."""
+        check_ms = int(self.core.settings.get("hands.actions_check_s")) * 1000
+        return await self.actions(slug, within_ms=check_ms)
 
     def _type_of(self, slug: str) -> str:
         account = self.account(slug)
@@ -521,6 +540,12 @@ class Hands:
                               "A rule is not the place for one: save it with the provider.")
         limits = rules.check_limits(
             found, limits if limits is not None else before.get("limits"))
+        unchecked = rules.unchecked_recipients(found, modes)
+        if limits["recipients"] in ("owner", "known") and unchecked:
+            raise Invalid(
+                f"Nothing was saved: \"{unchecked[0]}\" is open and may name someone, and "
+                "the limit on who may receive cannot check it. Hide it or give it a fixed "
+                "value, or choose \"anyone\".")
         refusal = rules.may_set_level(self.core, agent=agent, account=account, action=found,
                                       effect=effect, level=level, limits=limits,
                                       confirmed=bool(confirmed))
@@ -585,19 +610,22 @@ class Hands:
             subject=f"hand_rule:{agent}")
         return True
 
-    async def rule_state(self, rule: dict[str, Any]
+    async def rule_state(self, rule: dict[str, Any], *, fresh: bool = False
                          ) -> tuple[str, str | None, Action | None]:
         """Whether a rule's tool can be offered right now: ``(state, why not, action)``.
 
         Rule ``hand_withdrawn_when_changed`` lives here: an action whose version is not
-        the one the owner looked at is withdrawn until the owner reviews it."""
+        the one the owner looked at is withdrawn until the owner reviews it. ``fresh``
+        is for a call about to go out: the version is checked against the provider's
+        list as it is now (``actions_now``), never an old one."""
         account = self.account(rule["account"])
         if account is None:
             return ACCOUNT_GONE, "The account is no longer connected.", None
         try:
             self.adapter(account["provider_id"])
             self.provider_account(rule["account"])
-            actions = await self.actions(rule["account"])
+            actions = await (self.actions_now(rule["account"]) if fresh
+                             else self.actions(rule["account"]))
         except NotReady as exc:
             state = UNREACHABLE if exc.kind == "unreachable" else PROVIDER_OFF
             return state, exc.message, None

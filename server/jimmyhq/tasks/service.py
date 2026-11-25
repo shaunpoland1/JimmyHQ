@@ -20,7 +20,7 @@ from jimmyhq.core import Core
 from jimmyhq.ids import now_ms, ulid
 from jimmyhq.tape.registry import Event
 from jimmyhq.tasks import recur
-from jimmyhq.tasks.lens import KINDS, LENS, find, fold, initial
+from jimmyhq.tasks.lens import AGENT_READS, KINDS, LENS, find, fold, initial
 
 MAX_TITLE = 300
 MAX_NOTES = 10_000
@@ -156,6 +156,10 @@ def _view(task: dict, today: str, stalled_after: int, zone: tzinfo | None) -> di
         if task["done_at"] is not None else None,
         "dropped_at": task["dropped_at"],
         "filed_by": task["filed_by"],
+        # Who last changed each of the title, notes and assignee. Anyone but the owner
+        # means those words are not the owner's, whoever filed the task.
+        "edited_by": {k: (task.get("edited_by") or {}).get(k, task["filed_by"])
+                      for k in AGENT_READS},
         "next_due": due if is_open else None,
         "due_today": bool(is_open and due == today),
         "lapsed_days": lapsed,

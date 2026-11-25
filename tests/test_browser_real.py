@@ -154,7 +154,8 @@ def test_a_real_page_comes_back_as_elements_text_and_a_picture_within_the_image_
 
     async def test(w):
         done = await w.go("open_page", {"url": w.url()})
-        assert done.ok and '"The bean shop"' in done.result
+        assert done.ok and "The bean shop" not in done.result
+        assert "Title: The bean shop" in done.shown
         assert '[1] link "Second page"' in done.shown and "Sow from late winter" in done.shown
         assert 'text box "Search"' in done.shown and 'button "Find"' in done.shown
         assert "untrusted text from the internet" in done.shown
@@ -167,13 +168,14 @@ def test_a_real_page_comes_back_as_elements_text_and_a_picture_within_the_image_
         assert (folder(v.agent_dir("ada")) / "latest.png").read_bytes() == png
         part = bt.picture(v, "ada", ("open_page", done.shown))
         assert part["media_type"] == "image/png"
-        # Nothing the page said is in the log: the address, the title and sizes only.
+        # Nothing the page said is in the log: the host and sizes only.
         logged = str([[e.kind, e.data] for e in v.log.query()])
         assert "IGNORE YOUR RULES" not in logged and "Sow from late winter" not in logged
         clicked = await w.go("click", {"element": 1})
-        assert "/second" in clicked.result and '"Second"' in clicked.result
+        assert "Title: Second" in clicked.shown and "/second" in clicked.shown
+        assert "Second" not in clicked.result and "/second" not in clicked.result
         back = await w.go("go_back")
-        assert '"The bean shop"' in back.result
+        assert "Title: The bean shop" in back.shown
     real(test, v)
 
 
@@ -259,7 +261,7 @@ def test_a_download_is_refused_and_nothing_is_saved(v, tmp_path):  # noqa: F811
         page = await w.go("open_page", {"url": w.url()})
         done = await w.go("click", {"element": number(page, "Seed list")})
         assert "Downloads are refused: nothing was saved" in done.shown
-        assert '"The bean shop"' in done.result  # still on the page it was on
+        assert "Title: The bean shop" in done.shown  # still on the page it was on
         await asyncio.sleep(0.5)
         assert not list(tmp_path.rglob("seeds.bin*"))
     real(test, v)
@@ -271,9 +273,9 @@ def test_a_new_window_is_folded_into_a_tab_and_tabs_are_capped(v):  # noqa: F811
     async def test(w):
         page = await w.go("open_page", {"url": w.url()})
         opened = await w.go("click", {"element": number(page, "New window")})
-        assert "tab 2 of 2" in opened.result and '"Second"' in opened.result
+        assert "tab 2 of 2" in opened.result and "Title: Second" in opened.shown
         first = await w.go("switch_tab", {"tab": 1})
-        assert "tab 1 of 2" in first.result and '"The bean shop"' in first.result
+        assert "tab 1 of 2" in first.result and "Title: The bean shop" in first.shown
         await w.go("scroll", {"direction": "down"})  # a different state, so not a repeat
         again = await w.go("click", {"element": number(page, "New window")})
         assert "past the limit of 2" in again.shown and "of 2:" in again.result
@@ -320,7 +322,7 @@ def test_a_search_form_sent_by_get_works_at_read_only(v):  # noqa: F811
         page = await w.go("open_page", {"url": w.url()})
         await w.go("type_text", {"element": number(page, "Search"), "text": "runner beans"})
         done = await w.go("press_key", {"key": "enter"})
-        assert done.ok and '"Results"' in done.result
+        assert done.ok and "Title: Results" in done.shown
         assert "/search?q=runner+beans" in w.site.paths("GET")
     real(test, v)
 
@@ -372,7 +374,7 @@ def test_at_alone_a_real_form_is_sent_and_the_owner_is_told(v):  # noqa: F811
 
     async def test(w):
         done = await w.go("click", {"element": await fill_order(w, "2")})
-        assert done.ok and '"Thank you"' in done.result
+        assert done.ok and "Title: Thank you" in done.shown
         assert posts(w.site) == [("/orders", "qty=2&csrf=tok-1")]
         assert len(cards.board(v.core)["lanes"]["done"]) == 1
     real(test, v)

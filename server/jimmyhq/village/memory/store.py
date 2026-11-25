@@ -52,6 +52,10 @@ EVIDENCE_KEPT = 10
 # account, backed by nothing in the record.
 SELF_REPORTED = "self-reported"
 SOURCES = ("owner", "seen", "village", "web:unconfirmed", SELF_REPORTED)
+# A line that rests on outside text (a page, a search, an integration's answer) says so
+# wherever the agent reads it, and is not taken as fact or as the owner's word.
+OUTSIDE = "web:unconfirmed"
+OUTSIDE_NOTE = " (from outside, not confirmed)"
 # Who the agent is, its own life and what it wants are its own account by nature, so the
 # limits on self-reported lines apply everywhere else.
 OWN_ACCOUNT_SECTIONS = ("self", "story", "wants")
@@ -104,8 +108,12 @@ def crowded(texts: list[str], text: str) -> bool:
 
 
 def shown(item: dict[str, Any]) -> str:
-    """A line as the agent reads it. One it only has its own word for says so."""
-    return item["text"] + (SELF_NOTE if limited(item) else "")
+    """A line as the agent reads it. One it only has its own word for, and one that came
+    from outside text, says so."""
+    text = item["text"]
+    if item.get("source") == OUTSIDE and not text.lower().startswith("unconfirmed ("):
+        return text + OUTSIDE_NOTE
+    return text + (SELF_NOTE if limited(item) else "")
 
 
 def to_ms(ts: float) -> int:

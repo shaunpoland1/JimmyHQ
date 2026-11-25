@@ -26,6 +26,8 @@ KINDS = ("task.filed", "task.refiled", "task.completed", "task.reopened", "task.
          "task.unkept", "task.pushed", "task.unpushed", "task.dropped", "task.restored",
          "task.ranked")
 _VALUES = ("title", "notes", "area", "due", "due_time", "repeat", "assignee")
+# The fields an agent reads as its work: whoever last changed one of these wrote its words.
+AGENT_READS = ("title", "notes", "assignee")
 
 
 def initial() -> dict[str, Any]:
@@ -86,6 +88,7 @@ def fold(state: dict[str, Any], event: Event) -> dict[str, Any]:
                 "status": "open", "created": ts, "updated": ts, "done_at": None,
                 "dropped_at": None, "filed_by": event.actor, "pushes": 0, "pushed_from": [],
                 "kept": 0, "rounds": [],
+                "edited_by": {k: event.actor for k in AGENT_READS},
             }
             state["order"].append(task_id)
     elif known is None:
@@ -103,6 +106,10 @@ def fold(state: dict[str, Any], event: Event) -> dict[str, Any]:
             # Rounds are counted from the due date given with the rule.
             known["anchor"] = p["due"] if p["repeat"] else None
             known["pushed_from"] = []  # a push from the old schedule cannot be taken back
+        # Who last changed each field an agent reads. A task from before this was kept
+        # has none: its fields are all the filer's.
+        by = known.setdefault("edited_by", {k: known["filed_by"] for k in AGENT_READS})
+        by.update({k: event.actor for k in AGENT_READS if values[k] != known[k]})
         known.update(values, updated=ts)
     elif kind == "task.completed":
         if known["status"] == "open":
@@ -178,7 +185,7 @@ def fold(state: dict[str, Any], event: Event) -> dict[str, Any]:
 
 class TaskLens(Lens):
     name = "tasks"
-    version = 2  # 2: tasks remember where each push moved them from
+    version = 3  # 3: tasks remember who last changed the title, notes and assignee
     kinds = KINDS
 
     def initial(self) -> dict[str, Any]:

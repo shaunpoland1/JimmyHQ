@@ -27,7 +27,7 @@ test("each source of a memory line is said in plain words, and the unchecked one
   assert.equal(provenanceOf("owner").label, "From you");
   assert.equal(provenanceOf("seen").label, "Seen in its own actions");
   assert.equal(provenanceOf("village").label, "From the village's news");
-  assert.equal(provenanceOf("web:unconfirmed").label, "From the web, unconfirmed");
+  assert.equal(provenanceOf("web:unconfirmed").label, "From outside, unconfirmed");
   assert.equal(provenanceOf("self-reported").label, "Its own account, not checked");
   assert.equal(provenanceOf("owner").trust, "checked");
   assert.equal(provenanceOf("web:unconfirmed").trust, "unchecked");

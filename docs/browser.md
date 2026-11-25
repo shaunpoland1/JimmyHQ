@@ -62,8 +62,8 @@ never on the Tape.
 **Where the page goes.** What a page shows is sent to the agent's model, as text and, if
 the model takes pictures, as a picture. With "Local only" on for the agent, that model is
 on this machine or the call is not made. Nothing else in JimmyHQ sends page content to a
-model. In the village's own log an action leaves one line the village wrote: the address,
-the title and sizes.
+model. In the village's own log an action leaves one line the village wrote: the site's host
+and sizes. The title and the full address reach the agent only inside the marked view.
 
 ## Installing the engine
 

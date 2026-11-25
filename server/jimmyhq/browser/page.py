@@ -305,6 +305,12 @@ HELPERS_JS = r"""
 """
 
 
+UNSAFE_TAB_NOTE = ("A tab could not be set up safely and was closed: nothing it would "
+                   "have sent was let out.")
+# Targets that make no requests of their own: a failed set-up does not need them closed.
+CONTAINER_TYPES = ("browser", "tab")
+
+
 @dataclass
 class _Page:
     target: str
@@ -332,6 +338,8 @@ class ChromeDriver:
         self.active: str | None = None
         self._notes: list[str] = []
         self._tasks: set[asyncio.Task] = set()
+        self._setting_up: set[str] = set()  # sessions still being set up (not yet a tab)
+        self._root: dict[str, str] = {}  # a frame's or worker's session -> its tab's session
 
     # ------------------------------------------------------------------ life
     async def start(self) -> None:
@@ -371,6 +379,8 @@ class ChromeDriver:
             task.cancel()
         self.pages.clear()
         self.order.clear()
+        self._setting_up.clear()
+        self._root.clear()
         self.active = None
         if c is not None:
             await c.close()
@@ -402,9 +412,11 @@ class ChromeDriver:
         if self.c is None:
             return
         if method == "Target.attachedToTarget":
-            self._spawn(self._attached(p))
+            self._spawn(self._attached(p, session))
         elif method == "Target.detachedFromTarget":
             gone = p.get("sessionId")
+            self._setting_up.discard(gone)
+            self._root.pop(gone, None)
             if self.pages.pop(gone, None) is not None:
                 self.order.remove(gone)
                 if self.active == gone:
@@ -444,22 +456,53 @@ class ChromeDriver:
         if note not in self._notes:
             self._notes.append(note)
 
-    async def _attached(self, p: dict[str, Any]) -> None:
+    async def _attached(self, p: dict[str, Any], parent: str | None = None) -> None:
+        """Set up a new target, which starts paused. Fail closed: a target whose set-up
+        fails is closed and never resumed, because it would send with no request check."""
         info, session = p.get("targetInfo") or {}, p["sessionId"]
         c = self.c
         if c is None:
             return
+        kind = info.get("type")
+        if kind in CONTAINER_TYPES:
+            c.fire("Runtime.runIfWaitingForDebugger", None, session)  # sends nothing itself
+            return
+        root = self._root.get(parent or "", parent)
+        if root is not None:
+            self._root[session] = root
+        if kind == "page" and len(self.order) + len(self._setting_up) >= self.max_tabs:
+            self._notes.append(f"The page tried to open another tab, past the limit of "
+                               f"{self.max_tabs}. It was closed.")
+            c.fire("Target.closeTarget", {"targetId": info["targetId"]})
+            return
+        self._setting_up.add(session)
         try:
-            if info.get("type") != "page":
-                with contextlib.suppress(cdp.CDPError):
-                    await c.send("Fetch.enable", {"patterns": [{"urlPattern": "*"}]}, session, 5)
-                    await self._children(c, session)
+            # What must be on before the target runs at all: the request check, here and
+            # for what it starts. Page.enable is left until after: a real browser was seen
+            # not to answer it for a pop-up that is still paused, which made every pop-up
+            # run unwatched under the old order. A failure after the target runs still
+            # closes it, but by then nothing it sends goes unchecked.
+            await c.send("Fetch.enable", {"patterns": [{"urlPattern": "*"}]}, session, 10)
+            await self._children(c, session)
+            if session not in self._setting_up:  # it went away while it was being set up
                 return
-            if len(self.order) >= self.max_tabs:
-                self._notes.append(f"The page tried to open another tab, past the limit of "
-                                   f"{self.max_tabs}. It was closed.")
-                c.fire("Target.closeTarget", {"targetId": info["targetId"]})
-                return
+            c.fire("Runtime.runIfWaitingForDebugger", None, session)
+            if kind == "page":
+                await c.send("Page.enable", None, session, 10)
+                await c.send("Page.setInterceptFileChooserDialog", {"enabled": True},
+                             session, 10)
+                await c.send("Emulation.setDeviceMetricsOverride", {
+                    "width": self.width, "height": self.height, "deviceScaleFactor": 1,
+                    "mobile": False}, session, 10)
+        except Exception:  # noqa: BLE001 - whatever went wrong, the target is not let go
+            log.debug("a new browser target could not be set up", exc_info=True)
+            self._setting_up.discard(session)
+            self._close_unsafe(c, info, session, root)
+            return
+        if session not in self._setting_up:
+            return
+        self._setting_up.discard(session)
+        if kind == "page":
             page = _Page(info["targetId"], session)
             self.pages[session] = page
             self.order.append(session)
@@ -468,18 +511,21 @@ class ChromeDriver:
             elif len(self.order) > 1:
                 self.active = session  # a new tab comes to the front, as it does for a person
                 self._notes.append("A new tab opened and is now the one in front.")
-            await c.send("Page.enable", None, session, 10)
-            await c.send("Fetch.enable", {"patterns": [{"urlPattern": "*"}]}, session, 10)
-            await self._children(c, session)
-            await c.send("Page.setInterceptFileChooserDialog", {"enabled": True}, session, 10)
-            await c.send("Emulation.setDeviceMetricsOverride", {
-                "width": self.width, "height": self.height, "deviceScaleFactor": 1,
-                "mobile": False}, session, 10)
             page.ready.set()
-        except cdp.CDPError:
-            log.debug("a new browser target could not be set up", exc_info=True)
-        finally:
-            c.fire("Runtime.runIfWaitingForDebugger", None, session)
+
+    def _close_unsafe(self, c: cdp.CDP, info: dict[str, Any], session: str,
+                      root: str | None) -> None:
+        """Close a target that could not be put under the request check, and the tab it
+        belongs to when it is a frame or a worker, so nothing it started runs unwatched.
+        It is never resumed."""
+        c.fire("Target.closeTarget", {"targetId": info.get("targetId")})
+        page = self.pages.pop(root, None) if root else None
+        if page is not None:
+            self.order.remove(root)
+            if self.active == root:
+                self.active = self.order[-1] if self.order else None
+            c.fire("Target.closeTarget", {"targetId": page.target})
+        self._notes.append(UNSAFE_TAB_NOTE)
 
     @staticmethod
     async def _children(c: cdp.CDP, session: str) -> None:
@@ -533,6 +579,8 @@ class ChromeDriver:
         """Give the page a moment to react, then wait for it to finish loading."""
         await asyncio.sleep(self.settle_s)
         end = time.monotonic() + self.page_timeout_s
+        while self._setting_up and time.monotonic() < end:  # a new tab is not one till then
+            await asyncio.sleep(0.02)
         while time.monotonic() < end:
             try:
                 if await self._call("document.readyState") == "complete":

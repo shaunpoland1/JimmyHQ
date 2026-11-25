@@ -185,6 +185,7 @@ def jobs(core: Core, scheduler: Scheduler) -> None:
     def sweep() -> None:
         settle_unknown(core)
         execute.card_unknown(core)
+        calls.drop_old_copies(hands(core))
 
     scheduler.every("hands.settle", SETTLE_EVERY_S, sweep)
     scheduler.every("hands.execute", EXECUTE_EVERY_S,
@@ -212,19 +213,25 @@ RULES = [
     ("hand_look_not_do", None, calls.call),
     ("hand_ask_calls_nobody", None, calls._request),
     ("hand_alone_inside_limits", None, rules.outside_limits),
+    ("hand_recipient_limit_covers_every_recipient", None, rules.unchecked_recipients),
+    ("hand_amount_is_a_plain_number", None, rules.amount_over),
     ("hand_max_tools_per_agent", "hands.max_tools_per_agent", Hands.tools_for),
     ("hand_withdrawn_when_changed", None, Hands.rule_state),
+    ("hand_checked_fresh_before_running", "hands.actions_check_s", Hands.actions_now),
     ("hand_calls_per_day", "hands.calls_per_day", caps.calls_per_day),
     ("hand_calls_per_month", "hands.calls_per_month", caps.calls_per_month),
     ("hand_requests_per_day", "hands.requests_per_day", caps.requests_per_day),
     ("hand_rule_per_day", None, caps.reads_per_day),
     ("hand_repeat_reads_only", "hands.repeat_minutes", calls._repeat),
+    ("hand_kept_copy_follows_the_rule", "hands.hidden_fields", calls.kept_name),
+    ("hand_old_copies_dropped", "hands.repeat_minutes", calls.drop_old_copies),
     ("hand_request_frozen", None, calls.fingerprint_of),
     ("hand_request_expires", "hands.request_expires_h", calls.perform),
     ("hand_runs_once", None, calls._execute),
     ("hand_never_retried", "hands.run_timeout_s", calls.settle_unknown),
     ("hand_undo_known", None, calls.undo),
     ("hand_receipt_has_no_values", None, calls.receipt_of),
+    ("hand_values_only_for_the_owner", None, calls.request_values),
     ("hand_secret_keys_dropped", "hands.hidden_fields", shape.drop_secret_keys),
     ("hand_secret_values_scrubbed", None, shape.scrub),
     ("hand_addresses_masked", None, shape.mask_addresses),

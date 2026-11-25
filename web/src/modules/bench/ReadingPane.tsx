@@ -5,6 +5,7 @@ import { errorDetail } from "../../api";
 import { EmptyState } from "../../components/EmptyState";
 import { useAgentNames } from "../../lib/useAgentNames";
 import { useCardAppLink } from "../apps/useCardAppLink";
+import { RequestValues } from "../hands/RequestValues";
 import { fileUrl } from "./api";
 import type { Action, Card, CardListItem, SnoozeChoice } from "./api";
 import { stillSnoozed, waitStart } from "./lib/board";
@@ -247,6 +248,9 @@ export function ReadingPane({
               The full text of this card could not be read from the Vault.
             </p>
           ) : null}
+
+          {/* A module's own part of a card: renders nothing for other kinds. */}
+          <RequestValues cardId={full.id} kind={full.kind} status={full.status} />
 
           {full.why ? (
             <section className="mb-4">

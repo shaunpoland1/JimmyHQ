@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 from collections.abc import Callable
 from typing import Any
@@ -149,6 +150,8 @@ def _value(kind: str | None, schema: dict[str, Any], value: Any, name: str) -> A
     elif kind in ("number", "integer"):
         if isinstance(value, bool) or not isinstance(value, int | float):
             raise ValueError(f"\"{name}\" must be a number")
+        if isinstance(value, float) and not math.isfinite(value):
+            raise ValueError(f"\"{name}\" must be an ordinary number, not {value}")
         if kind == "integer":
             if isinstance(value, float) and not value.is_integer():
                 raise ValueError(f"\"{name}\" must be a whole number")
@@ -390,7 +393,8 @@ def check_limits(action: Action, limits: dict[str, Any] | None) -> dict[str, Any
                           "limited by recipient.")
     most = limits.get("max_amount")
     if most is not None:
-        if isinstance(most, bool) or not isinstance(most, int | float) or most < 0:
+        if (isinstance(most, bool) or not isinstance(most, int | float)
+                or not math.isfinite(most) or most < 0):
             raise Invalid("The largest amount must be a number, 0 or more.")
         if not action.amount:
             raise Invalid("This action does not carry an amount, so it cannot be limited "
@@ -412,8 +416,46 @@ def recipients_of(action: Action, final: dict[str, Any]) -> list[str]:
     return out
 
 
+_RECIPIENT_WORDS = frozenset({
+    "cc", "bcc", "recipient", "recipients", "email", "emails", "attendee", "attendees",
+    "invitee", "invitees", "participant", "participants", "guest", "guests",
+})
+
+
+def looks_like_recipient(name: str) -> bool:
+    """Whether an argument's name suggests it says who receives something: it starts
+    with ``to`` or has a word such as ``cc``, ``recipients``, ``email`` or
+    ``attendees`` in it. Cautious on purpose: a false yes only means asking."""
+    found = [w for w in re.split(r"[^a-z0-9]+", re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", name)
+                                 .lower()) if w]
+    return bool(found) and (found[0] == "to" or any(w in _RECIPIENT_WORDS for w in found))
+
+
+def unchecked_recipients(action: Action, modes: dict[str, dict[str, Any]]) -> list[str]:
+    """Rule ``hand_recipient_limit_covers_every_recipient``: the open arguments that look
+    as if they name a recipient but are not among those the action says carry its
+    recipients. "Who may receive" cannot check them, so a rule with that limit may not
+    leave one open, and a call that fills one in is put to the owner."""
+    return sorted(name for name, entry in (modes or {}).items()
+                  if (entry or {}).get("mode") == OPEN and name not in action.recipients
+                  and looks_like_recipient(name))
+
+
 def _same(address: str) -> str:
     return address.strip().casefold()
+
+
+def amount_over(amount: Any, most: Any) -> bool:
+    """Rule ``hand_amount_is_a_plain_number``: whether an amount does not pass "the
+    largest amount". Only a finite number from 0 up to the limit passes: anything that
+    is not a number, not finite (``nan``, ``inf``) or below zero is over it."""
+    try:
+        value, limit = float(amount), float(most)
+    except (TypeError, ValueError, OverflowError):
+        return True
+    if isinstance(amount, bool) or not (math.isfinite(value) and math.isfinite(limit)):
+        return True
+    return value < 0 or value > limit
 
 
 def outside_limits(core: Any, rule: dict[str, Any], action: Action, final: dict[str, Any],
@@ -433,16 +475,16 @@ def outside_limits(core: Any, rule: dict[str, Any], action: Action, final: dict[
         if any(_same(r) not in allowed for r in recipients_of(action, final)):
             return ("it would go to someone who is not you" if who == "owner"
                     else "it would go to someone who is not on the list of known addresses")
+        unchecked = [n for n in unchecked_recipients(action, rule.get("arguments") or {})
+                     if final.get(n) not in (None, "", [])]
+        if unchecked:
+            return (f"\"{line(unchecked[0], 60)}\" may name someone, and the limit on who "
+                    "may receive cannot check it")
     most = limits.get("max_amount")
     if most is not None and action.amount:
         amount = final.get(action.amount)
-        if amount is not None:
-            try:
-                over = float(amount) > float(most)
-            except (TypeError, ValueError):
-                over = True
-            if over:
-                return f"the amount is above the limit of {most:g}"
+        if amount is not None and amount_over(amount, most):
+            return f"the amount is not a number from 0 up to the limit of {most:g}"
     return None
 
 

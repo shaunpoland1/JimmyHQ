@@ -330,4 +330,17 @@ def build_router(core: Core, hands: Hands) -> APIRouter:  # noqa: C901, PLR0915 
             "done_card": done.get(r["id"]),
             "card": done.get(r["id"]) or r["unknown_card"] or r["card_id"]} for r in found]}
 
+    # --- requests that wait for the owner -------------------------------------
+
+    @router.get("/requests/by-card/{card_id}")
+    def request_values(card_id: str, _: Principal = Depends(owner)):  # noqa: B008
+        """What a waiting request would send, for the owner's screen beside its Bench
+        card (``calls.request_values``). Only the signed-in owner: a token is refused."""
+        found = calls.request_values(hands, card_id)
+        if found is None:
+            raise HTTPException(404, "No request is tied to that card. Open the card from "
+                                     "the Bench to see what it says.")
+        return found
+
     return router
+

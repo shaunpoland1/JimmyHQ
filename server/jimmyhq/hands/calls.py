@@ -27,6 +27,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import re
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -35,7 +36,7 @@ from jimmyhq.hands import caps, mail, rules, shape
 from jimmyhq.hands import store as ledger
 from jimmyhq.hands.provider import READ, Action, Outcome, can_undo
 from jimmyhq.hands.rules import HandRefused, Invalid
-from jimmyhq.hands.service import ON, Hands, NotReady
+from jimmyhq.hands.service import ON, UNREACHABLE, Hands, NotReady
 from jimmyhq.ids import ulid
 
 log = logging.getLogger("jimmyhq.hands")
@@ -102,9 +103,15 @@ def fingerprint_of(*, request_id: str, agent: str, account: str, action: str, ve
                                      default=str).encode("utf-8")).hexdigest()
 
 
-def kept_name(agent: str, account: str, action: str, version: str,
-              final: dict[str, Any]) -> str:
-    said = json.dumps([agent, account, action, version, final], sort_keys=True, default=str)
+def kept_name(core: Any, rule: dict[str, Any], final: dict[str, Any]) -> str:
+    """Rule ``hand_kept_copy_follows_the_rule``: the name a reading's kept copy is filed
+    under. The copy is the answer after shaping, so the name covers everything that
+    shaped it: the whole rule (agent, account, action, version, addresses shown, fields
+    kept) and the settings that hide fields and cut values. When the owner tightens any
+    of them, the old copy is never found again and the next reading is a fresh call."""
+    get = core.settings.get
+    said = json.dumps([rules.rule_hash(rule), final, get("hands.hidden_fields"),
+                       get("hands.value_chars")], sort_keys=True, default=str)
     return hashlib.sha256(said.encode("utf-8")).hexdigest()
 
 
@@ -140,7 +147,7 @@ async def _resolve(h: Hands, agent: str, tool: str) -> tuple[dict[str, Any], Act
             "hand_needs_a_rule",
             f"Nothing was done: you have no tool called \"{shape.line(tool, 80)}\". Use "
             "only the tools you are offered.")
-    state, why, action = await h.rule_state(rule)
+    state, why, action = await h.rule_state(rule, fresh=True)
     if state != ON or action is None:
         raise _owner_fix(h, tool, why)
     return rule, action
@@ -177,7 +184,7 @@ async def call(h: Hands, *, agent: str, tool: str, arguments: dict[str, Any] | N
                             cause, root)
     name = None
     if reading:
-        name = kept_name(agent, rule["account"], rule["action"], rule["version"], final)
+        name = kept_name(h.core, rule, final)
         again = _repeat(h, rule, name, start)
         if again is not None:
             return again
@@ -251,6 +258,14 @@ def _repeat(h: Hands, rule: dict[str, Any], name: str, start: int) -> Called | N
                   effect=rule["effect"], level=rule["level"], cached=True, more=seen.more)
 
 
+def drop_old_copies(h: Hands) -> int:
+    """Rule ``hand_old_copies_dropped``: a kept copy older than ``hands.repeat_minutes``
+    can never answer again, so it is deleted, whether or not another reading follows.
+    With the window at 0 every copy goes. Run by the worker's ``hands.settle`` job."""
+    window = int(h.core.settings.get("hands.repeat_minutes")) * 60_000
+    return h.store.drop_kept(h.now() - window + (0 if window > 0 else 1))
+
+
 def _request(h: Hands, rule: dict[str, Any], action: Action, final: dict[str, Any], why: str,
              actor: str, cause: str | None, root: str | None) -> NeedsApproval:
     """Rule ``hand_ask_calls_nobody``: an action that needs the owner's yes is frozen
@@ -279,6 +294,26 @@ def _request(h: Hands, rule: dict[str, Any], action: Action, final: dict[str, An
         why=why, arguments=final, recipients=tuple(recipients),
         amount=final.get(action.amount) if action.amount else None, can_undo=action.undo,
         expires_ms=now + _expires_ms(h), event_id=event.id)
+
+
+_CARD_ID = re.compile(r"[0-9A-HJKMNP-TV-Z]{26}")
+
+
+def request_values(h: Hands, card_id: str) -> dict[str, Any] | None:
+    """Rule ``hand_values_only_for_the_owner``: a request as the owner's Bench card shows
+    it. Its card names each argument and its size, never a value, because a card is
+    kept on the Tape for ever. The values are here, in ``hands.db``, only while the
+    request waits: once it is performed, declined, withdrawn or gone with its account
+    they were erased, and ``arguments`` is None. None when no request is tied to that
+    card. The API gives this to the signed-in owner only."""
+    card_id = str(card_id or "").strip().upper()
+    row = h.store.pending_by_card(card_id) if _CARD_ID.fullmatch(card_id) else None
+    if row is None:
+        return None
+    waiting = row["status"] == ledger.PENDING and row["arguments"] is not None
+    return {"card_id": card_id, "agent": row["agent"], "account": row["account"],
+            "action": row["action"], "tool": row["tool"], "waiting": waiting,
+            "arguments": row["arguments"] if waiting else None}
 
 
 def _expires_ms(h: Hands) -> int:
@@ -343,7 +378,13 @@ async def perform(h: Hands, fingerprint: str, *, card_id: str | None = None,
     rule = h.rule(row["agent"], row["account"], row["action"])
     if rule is None or rules.rule_hash(rule) != row["rule_hash"]:
         raise changed
-    state, _, action = await h.rule_state(rule)
+    state, _, action = await h.rule_state(rule, fresh=True)
+    if state == UNREACHABLE:
+        raise HandRefused(
+            "hand_withdrawn_when_changed",
+            "Nothing was done: the provider could not be asked whether the action is still "
+            "the one that was approved, so it was not performed. It has to be asked for "
+            "again.", frustrate=False)
     if state != ON or action is None or action.version != row["version"]:
         raise changed
     called = await _execute(

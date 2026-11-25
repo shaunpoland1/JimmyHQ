@@ -327,3 +327,141 @@ def test_a_redirect_to_a_private_address_is_a_new_request_and_is_refused(core):
     first, second = asyncio.run(run())
     assert first.startswith(b"HTTP/1.1 302") and b"inside.example.com" in first
     assert second.startswith(b"HTTP/1.1 403") and b"browser_public_address" in second
+
+
+# --- one request per connection ---------------------------------------------------------------
+
+
+class KeepAliveSite:
+    """A site that ignores ``Connection: close``: it answers, says keep-alive, and goes on
+    reading the same socket for more requests. ``seen`` holds each request's head and body."""
+
+    def __init__(self, chunked: bool = False):
+        self.seen: list[tuple[str, bytes]] = []
+        self.chunked = chunked
+        self.port = 0
+        self._server: asyncio.AbstractServer | None = None
+
+    async def __aenter__(self) -> KeepAliveSite:
+        self._server = await asyncio.start_server(self._serve, "127.0.0.1", 0)
+        self.port = self._server.sockets[0].getsockname()[1]
+        return self
+
+    async def __aexit__(self, *_) -> None:
+        self._server.close()
+
+    async def _serve(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
+        try:
+            while True:
+                head = (await reader.readuntil(b"\r\n\r\n")).decode("latin-1")
+                length = next((int(x.split(":")[1]) for x in head.split("\r\n")
+                               if x.lower().startswith("content-length:")), 0)
+                self.seen.append((head, await reader.readexactly(length)))
+                if self.chunked:
+                    writer.write(b"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n"
+                                 b"Connection: keep-alive\r\n\r\n5\r\nfirst\r\n6\r\nsecond\r\n"
+                                 b"0\r\n\r\n")
+                else:
+                    writer.write(b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\nConnection: Keep-Alive"
+                                 b"\r\nKeep-Alive: timeout=60\r\n\r\nhello")
+                await writer.drain()
+        except (OSError, asyncio.IncompleteReadError):
+            pass
+        finally:
+            writer.close()
+
+
+async def two_requests(port: int, first: str, second: str) -> tuple[bytes, bool]:
+    """Send one request, then another on the same connection straight behind it. Returns
+    everything the proxy sent back, and whether it closed the connection."""
+    reader, writer = await asyncio.open_connection("127.0.0.1", port)
+    writer.write((first + second).encode("latin-1"))
+    await writer.drain()
+    data = await asyncio.wait_for(reader.read(-1), 5)  # returns only when the proxy closes
+    writer.close()
+    return data, True
+
+
+def test_a_second_request_on_the_same_connection_never_reaches_a_site_that_keeps_it_open(core):
+    async def run():
+        async with KeepAliveSite() as web:
+            here = f"127.0.0.1:{web.port}"
+            proxy = FenceProxy(fence(core, also_allow=[("127.0.0.1", web.port)]))
+            port = await proxy.start()
+            try:
+                answer, closed = await two_requests(
+                    port, get(f"http://{here}/first", here),
+                    get("http://chase.com/secret", "chase.com")
+                    .replace("\r\n\r\n", "\r\nCookie: session=abc\r\n\r\n"))
+            finally:
+                await proxy.stop()
+            return answer, closed, web.seen
+    answer, closed, seen = asyncio.run(run())
+    assert closed and answer.startswith(b"HTTP/1.1 200") and answer.endswith(b"hello")
+    assert answer.count(b"HTTP/1.1") == 1  # no answer to the second request, from anyone
+    assert [head.split("\r\n")[0] for head, _ in seen] == ["GET /first HTTP/1.1"]
+    assert all("chase.com" not in head and "session=abc" not in head for head, _ in seen)
+
+
+def test_the_answer_says_close_and_drops_keep_alive_even_when_the_site_offered_both(core):
+    async def run():
+        async with KeepAliveSite() as web:
+            here = f"127.0.0.1:{web.port}"
+            proxy = FenceProxy(fence(core, also_allow=[("127.0.0.1", web.port)]))
+            port = await proxy.start()
+            try:
+                return await ask(port, get(f"http://{here}/", here))
+            finally:
+                await proxy.stop()
+    head = asyncio.run(run()).split(b"\r\n\r\n")[0].lower()
+    assert b"connection: close" in head and b"keep-alive" not in head
+
+
+def test_a_chunked_answer_is_passed_on_whole_and_the_connection_closes_after_it(core):
+    async def run():
+        async with KeepAliveSite(chunked=True) as web:
+            here = f"127.0.0.1:{web.port}"
+            proxy = FenceProxy(fence(core, also_allow=[("127.0.0.1", web.port)]))
+            port = await proxy.start()
+            try:
+                return await ask(port, get(f"http://{here}/", here))
+            finally:
+                await proxy.stop()
+    answer = asyncio.run(run())
+    assert answer.endswith(b"5\r\nfirst\r\n6\r\nsecond\r\n0\r\n\r\n")
+    assert b"keep-alive" not in answer.lower()
+
+
+def test_a_request_body_goes_to_the_site_whole_and_nothing_after_it(core):
+    async def run():
+        async with KeepAliveSite() as web:
+            here = f"127.0.0.1:{web.port}"
+            proxy = FenceProxy(fence(core, also_allow=[("127.0.0.1", web.port)]))
+            port = await proxy.start()
+            post = (f"POST http://{here}/form HTTP/1.1\r\nHost: {here}\r\n"
+                    "Content-Length: 11\r\n\r\nqty=2&a=bcdX")  # one byte too many, on purpose
+            try:
+                await ask(port, post)
+            finally:
+                await proxy.stop()
+            return web.seen
+    seen = asyncio.run(run())
+    assert len(seen) == 1 and seen[0][1] == b"qty=2&a=bcd"
+
+
+def test_a_chunked_request_body_is_refused_and_nothing_reaches_the_site(core):
+    async def run():
+        async with KeepAliveSite() as web:
+            here = f"127.0.0.1:{web.port}"
+            proxy = FenceProxy(fence(core, also_allow=[("127.0.0.1", web.port)]))
+            port = await proxy.start()
+            post = (f"POST http://{here}/form HTTP/1.1\r\nHost: {here}\r\n"
+                    "Transfer-Encoding: chunked\r\n\r\n3\r\nabc\r\n0\r\n\r\n")
+            try:
+                answer = await ask(port, post)
+            finally:
+                await proxy.stop()
+            return answer, web.seen
+    answer, seen = asyncio.run(run())
+    assert answer.startswith(b"HTTP/1.1 411") and b"browser_request_shape" in answer
+    assert seen == []

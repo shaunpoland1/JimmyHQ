@@ -15,6 +15,7 @@ from test_hands_core_fakes import ADDRESS, KEY, LEAKED, Clock, events, tape_text
 PASSWORD = "correct horse battery"
 BODY = {"id": "demo", "type": "fake", "label": "Demo"}
 RULE = {"agent": "ada", "account": "notes", "action": "notes.list"}
+CARD = "01JABCDEFGHJKMNPQRSTVWXYZ0"  # no request is tied to it: the owner gets a 404
 
 # Every route, with a request that would be valid from the owner.
 READS = [
@@ -26,7 +27,9 @@ READS = [
     ("GET", "/api/hands/rules", None),
     ("GET", "/api/hands/runs", None),
 ]
+# Owner only. A waiting request's values change nothing, but only the owner may read them.
 WRITES = [
+    ("GET", f"/api/hands/requests/by-card/{CARD}", None),
     ("POST", "/api/hands/providers", {"type": "fake", "label": "Second"}),
     ("PUT", "/api/hands/providers/demo", {"label": "Renamed"}),
     ("PUT", "/api/hands/providers/demo/key", {"key": KEY}),
@@ -83,9 +86,10 @@ def test_every_route_under_hands_is_listed_in_these_tests(core, owner):
     listed = {(m, p.split("?")[0]) for m, p, _ in READS + WRITES}
     real = {(method.upper(), path) for path, item in owner.app.openapi()["paths"].items()
             if path.startswith("/api/hands") for method in item}
-    assert len(real) == 23
+    assert len(real) == 24
     shaped = {(m, p.replace("/demo", "/{provider_id}").replace("/notes", "/{account}")
-               .replace("/other", "/{account}").replace("/header", "/{name}"))
+               .replace("/other", "/{account}").replace("/header", "/{name}")
+               .replace(CARD, "{card_id}"))
               for m, p in listed}
     assert shaped == real
 
@@ -121,8 +125,8 @@ def test_the_owner_can_use_every_route(core, ready):
             assert ready.delete("/api/hands/accounts/other").status_code == 200
         r = ready.request(method, path, json=body)
         # "other" connected at once, so there is nothing left to finish: a plain answer.
-        fine = ((422,) if path.endswith("/finish") else (404,) if path.endswith("/connect")
-                else (200, 201))
+        fine = ((422,) if path.endswith("/finish")
+                else (404,) if path.endswith(("/connect", CARD)) else (200, 201))
         assert r.status_code in fine, (method, path, r.text)
 
 

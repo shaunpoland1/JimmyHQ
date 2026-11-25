@@ -18,8 +18,9 @@ do with it. Unlike web lookup, a browser can act on a live site, so the rules ar
   values, or done. An approval is used only if the page still shows exactly what the
   card showed.
 - **Outside text is data.** What a page says is never a tool's result. The result,
-  which is logged, is a line the village wrote: the address, the title and sizes. The
-  elements and text are shown once, in the next view, marked as untrusted.
+  which is logged, is a line the village wrote: the host and sizes. The title and
+  the full address are in the marked view only, with the elements and text, shown once and
+  marked as untrusted.
 - **Limits, counted from the log**, and the world's own wall and repeat guards, which
   know these tools by name.
 
@@ -89,6 +90,15 @@ def _host(url: str) -> str:
         return (urlsplit(url).hostname or "").lower() or "a page"
     except ValueError:
         return "a page"
+
+
+def _site(url: str) -> str:
+    """The host of an address, in the plain characters a host name has and no more: what a
+    result may say of a page, because a host is all of an address that is not a page's own
+    words. The rest of an address (its path and query) is whatever the page or the
+    redirect chose."""
+    plain = "".join(ch for ch in _host(url) if ch.isascii() and (ch.isalnum() or ch in ".-:[]"))
+    return plain[:80] or "a page"
 
 
 def _number(args: dict[str, Any], name: str) -> int:
@@ -347,12 +357,14 @@ async def _after(ctx: Any, session: Session, did: str, said: dict[str, Any],
         result = f"{did}, but the page could not be looked at afterwards ({e.sentence})"
         return Done(result=result, args_logged=logged.args(said),
                     category=category_of(ctx.mode), ok=False, shown=result + ".")
-    address, title = _address(look.url), logged.text(_line(look.title))
-    result = (f"{did}; now at {address} (\"{title}\"), tab {active} of {len(tab_lines)}: "
+    # What the page says (its title, its path and query) is in the framed view below and
+    # nowhere else: this line is logged and shown again in every later beat.
+    site = _site(look.url)
+    result = (f"{did}; now at {site}, tab {active} of {len(tab_lines)}: "
               f"{len(look.elements) + look.more} elements, {look.text_chars} characters of "
               f"text, {where(look)}")
     if event:
-        v.log.append(event, agent_id, v.clock.now(), ok=True, url=address, title=title,
+        v.log.append(event, agent_id, v.clock.now(), ok=True, host=site,
                      elements=len(look.elements) + look.more, chars=look.text_chars)
     notes = list(session.driver.notes())
     if _landed_refused(session, await session.driver.tabs(), refused_before):
@@ -650,7 +662,7 @@ async def _send_approved(v, agent_id: str, item: dict[str, Any]) -> tuple[bool, 
             return False, changed
         session.touch()
         return True, (f"{owner(v)} approved it, and the form at {place} was sent as shown. "
-                      f"Your browser is now at {_address(look.url)}. Use read_page to see "
+                      f"Your browser is now at {_site(look.url)}. Use read_page to see "
                       "what came back.")
 
 
@@ -922,8 +934,7 @@ async def read_page(ctx: Any, args: dict[str, Any]) -> Any:
                    args_logged=said)
         piece, begin, end, _ = part(body, 0, int(S(v, "read_chars")))
         begin, end = start, start + len(piece)
-        address = _address(look.url)
-        result = f"read the page at {address}: characters {begin} to {end} of {total}"
+        result = f"read the page at {_site(look.url)}: characters {begin} to {end} of {total}"
         if not piece:
             words = f"{result}. There is nothing there: start must be below {total}"
             return Done(result=words, args_logged=logged.args(said),

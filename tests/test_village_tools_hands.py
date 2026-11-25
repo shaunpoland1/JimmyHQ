@@ -289,7 +289,7 @@ def test_an_undo_keeps_alone_when_the_owner_switched_that_safety_off(core, world
 # --- asking the owner -----------------------------------------------------------------------
 
 
-def test_asking_files_a_card_that_shows_exactly_what_will_be_done(core, world, v):
+def test_asking_files_a_card_that_names_each_argument_and_holds_no_value(core, world, v):
     h, w = world
     switch_on(h, "messages.send", arguments={
         "to": {"mode": "open"}, "text": {"mode": "open"},
@@ -304,23 +304,114 @@ def test_asking_files_a_card_that_shows_exactly_what_will_be_done(core, world, v
     assert (card["kind"], card["lane"], card["filed_by"]) == (
         "village.hand", "needs", f"agent:{AGENT}")
     assert [a["id"] for a in card["actions"]] == ["approve", "not_now", "no"]
-    # The action in plain words, the account, and every value as it will be sent: the
-    # agent's and the owner's fixed one, whole and unaltered.
+    # The action in plain words, the account, each argument by name and size: never a
+    # value, the agent's or the owner's fixed one.
     assert "Send a message" in card["title"] and ACCOUNT in card["title"]
-    assert BODY in card["body"] and TO in card["body"]
-    assert "Sent by an assistant." in card["body"]
+    whole = json.dumps(card)
+    for value in (TO, "snowman", "Two spaces", "Sent by an assistant."):
+        assert value not in whole, value
+    for line in (f"- text: {len(BODY)} characters", f"- to: {len(TO)} characters",
+                 "- signature: 21 characters", "not part of this card's record"):
+        assert line in card["body"], line
     details = {d["label"]: d["text"] for d in card["details"]}
-    assert details["Goes to 1"] == TO and details["Account"] == ACCOUNT
+    assert details["Goes to"] == "1 recipient" and details["Account"] == ACCOUNT
     assert details["Can be undone"] == "Yes" and details["What it does"] == "send"
     pending = hands.hands(core).store.pending_by_card(row["card_id"])
     assert details["Fingerprint"] == pending["fingerprint"] == row["extra"]["fingerprint"]
+    # The values wait in hands.db, whole and unaltered, for the owner's screen.
     assert pending["arguments"] == {"to": TO, "text": BODY,
                                     "signature": "Sent by an assistant."}
     # The waiting rule applies: a little purpose now, and the body waits on the card.
     a = v.world.agents[AGENT]
     assert row["card_id"] in a.waiting and a.needs["purpose"] > purpose
     assert f"waiting for {OWNER}" in bench_text(v, AGENT)
-    assert RULES["hand_card_shows_exactly"].fn is bridge.card_fields
+    assert RULES["hand_card_keeps_no_values"].fn is bridge.card_fields
+
+
+def secret_text() -> str:
+    """A body that looks like it carries a key, made at run time."""
+    return "Here is the key: " + "sk" + "-live-" + "Q7x" * 8 + " keep it safe."
+
+
+def village_db_text(core) -> str:
+    """Every row of every table in village.db, as text."""
+    import sqlite3
+
+    path = core.config.data / "village.db"
+    assert path.exists()
+    conn = sqlite3.connect(path)
+    try:
+        names = [r[0] for r in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")]
+        return json.dumps([[n, conn.execute(f"SELECT * FROM {n}").fetchall()]  # noqa: S608
+                           for n in names], default=str)
+    finally:
+        conn.close()
+
+
+def tape_text(core) -> str:
+    return json.dumps([e.payload for e in core.tape.after(0, limit=100_000)], default=str)
+
+
+def test_a_requests_values_reach_neither_the_tape_nor_village_db(core, world, v):
+    h, w = world
+    switch_on(h, "messages.send")
+    body, secret = secret_text(), "Q7x" * 8
+    _, row = ask_to_send(v, text=body)
+    take_in(v)
+    assert hands.pending(core, row["extra"]["fingerprint"])["arguments"]["text"] == body
+    assert row["card_id"] in village_db_text(core) and row["card_id"] in tape_text(core)
+    for where in (tape_text(core), village_db_text(core), logged(v)):
+        assert secret not in where and TO not in where and "keep it safe" not in where
+    assert "first_body" not in json.dumps(benchlink.get(v, row["card_id"])["extra"])
+    # Nor after the owner's yes: the outcome, the done card and the agent's answer.
+    decide(v, row["card_id"], "approve")
+    assert w.calls[-1]["arguments"]["text"] == body
+    for where in (tape_text(core), village_db_text(core)):
+        assert secret not in where and TO not in where
+    assert RULES["hand_values_stay_in_hands"].fn is bridge.said
+
+
+def test_only_the_owner_reads_a_waiting_requests_values_and_only_while_it_waits(
+        core, world, v, api):
+    h, w = world
+    owner, token = api
+    reader = core.auth.create_token("glance", ["read"])[1]
+    switch_on(h, "messages.send")
+    body = secret_text()
+    _, row = ask_to_send(v, text=body)
+    path = f"/api/hands/requests/by-card/{row['card_id']}"
+    shown = owner.get(path)
+    assert shown.status_code == 200
+    assert shown.json() == {"card_id": row["card_id"], "agent": AGENT, "account": ACCOUNT,
+                            "action": "messages.send", "tool": SEND, "waiting": True,
+                            "arguments": {"to": TO, "text": body}}
+    assert owner.get(path.lower()).json()["arguments"]["text"] == body
+    # A token, read or write, is refused, and learns nothing.
+    assert token.get(path).status_code == 403
+    with TestClient(owner.app, base_url="http://testserver",
+                    headers={"authorization": f"Bearer {reader}"}) as glance:
+        refused_ = glance.get(path)
+        assert refused_.status_code == 403 and body not in refused_.text
+    # A card no request is tied to, or no card at all, is a 404.
+    forged = bench.file_card(core, filed_by="token:other", kind="village.hand",
+                             source="Village", title="Approve me")
+    assert owner.get(f"/api/hands/requests/by-card/{forged}").status_code == 404
+    assert owner.get("/api/hands/requests/by-card/not-a-card").status_code == 404
+    # Once answered, the values are gone: the route says so and returns none.
+    decide(v, row["card_id"], "approve")
+    after = owner.get(path).json()
+    assert after["waiting"] is False and after["arguments"] is None and body not in str(after)
+    # Declined and withdrawn requests are the same.
+    _, no = ask_to_send(v, text="declined " + body)
+    decide(v, no["card_id"], "no", reason="Not this one.")
+    assert owner.get(f"/api/hands/requests/by-card/{no['card_id']}").json()["arguments"] is None
+    _, back = ask_to_send(v, text="withdrawn " + body)
+    go(v, bridge.WITHDRAW, {"card": back["card_id"]})
+    gone = owner.get(f"/api/hands/requests/by-card/{back['card_id']}").json()
+    assert gone == {"card_id": back["card_id"], "agent": AGENT, "account": ACCOUNT,
+                    "action": "messages.send", "tool": SEND, "waiting": False,
+                    "arguments": None}
+    assert ("hand_values_only_for_the_owner", None, hands.calls.request_values) in hands.RULES
 
 
 def test_an_approved_card_sends_exactly_what_it_showed(core, world, v):
@@ -329,7 +420,7 @@ def test_an_approved_card_sends_exactly_what_it_showed(core, world, v):
     h, w = world
     switch_on(h, "messages.send")
     _, row = ask_to_send(v)
-    shown = bench.get_card(core, row["card_id"])["body"]
+    shown = hands.calls.request_values(h, row["card_id"])["arguments"]  # the owner's screen
     # Meanwhile the agent rewrites its draft and its notes.
     home = v.home(AGENT)
     home.mkdir(parents=True, exist_ok=True)
@@ -338,7 +429,7 @@ def test_an_approved_card_sends_exactly_what_it_showed(core, world, v):
     [call] = w.calls
     assert call["name"] == "messages.send" and call["key"] == row["extra"]["fingerprint"]
     assert call["arguments"] == {"to": TO, "text": BODY}
-    assert call["arguments"]["text"].encode() == BODY.encode() and BODY in shown
+    assert call["arguments"]["text"].encode() == BODY.encode() and call["arguments"] == shown
     # The agent sees it in its next beat as the answer to its card.
     after = benchlink.get(v, row["card_id"])
     assert after["status"] == benchlink.APPROVED and "Done, exactly as shown" in after["note"]

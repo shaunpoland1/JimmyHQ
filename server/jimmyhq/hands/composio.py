@@ -115,7 +115,12 @@ OVERRIDES = ("spend", "delete", "send", "access")
 RECIPIENTS = frozenset({
     "to", "cc", "bcc", "recipient", "recipients", "recipient_email", "recipient_emails",
     "to_email", "to_emails", "to_address", "to_addresses", "attendees", "invitees",
+    "extra_recipients", "to_recipients", "cc_recipients", "bcc_recipients",
+    "cc_email", "cc_emails", "bcc_email", "bcc_emails", "cc_address", "cc_addresses",
+    "bcc_address", "bcc_addresses", "attendee_emails", "invitee_emails",
 })
+# Any other argument that looks like one of these is still not trusted as checked: see
+# ``rules.unchecked_recipients``.
 AMOUNTS = frozenset({
     "amount", "amount_cents", "amount_in_cents", "amount_minor", "total_amount",
     "payment_amount", "price",
@@ -203,8 +208,10 @@ def clear_arguments(schema: dict[str, Any]) -> tuple[tuple[str, ...], str | None
 
 def fingerprint(tool: dict[str, Any]) -> str:
     """Rule ``composio_version_changes_with_the_tool``: what the owner reviewed, as one
-    string. It changes when the tool's version, description, schema or hints change."""
-    seen = {k: tool.get(k) for k in ("slug", "description", "input_parameters", "tags")}
+    string. It changes when the tool's version, label, either description, schema or
+    hints change: everything the owner reads and the agent is told."""
+    seen = {k: tool.get(k) for k in ("slug", "name", "description", "human_description",
+                                     "input_parameters", "tags")}
     digest = hashlib.sha256(json.dumps(seen, sort_keys=True, default=str).encode()).hexdigest()
     version = tool.get("version")
     return f"{version}:{digest[:12]}" if isinstance(version, str) and version else digest[:12]

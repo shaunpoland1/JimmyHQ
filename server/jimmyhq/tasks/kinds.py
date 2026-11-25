@@ -78,6 +78,8 @@ class Snapshot(Payload):
     pushed_from: list[str | None] = Field(default_factory=list)
     kept: int = 0
     rounds: list[Round] = Field(default_factory=list)
+    # Who last changed the title, notes and assignee: the actor of the event that did.
+    edited_by: dict[str, str] = Field(default_factory=dict)
 
 
 @kind("task.completed", example={"task_id": _ID})

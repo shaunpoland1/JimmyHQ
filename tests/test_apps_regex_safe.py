@@ -17,8 +17,11 @@ PATHS = [ROOT / "sdk" / "python", *APPS]
 # `calls(call)` that makes `call(label, function)` for each function that reads outside text.
 EXTRA = [p / "tests" / "regex_safe.py" for p in APPS if (p / "tests" / "regex_safe.py").is_file()]
 N = 100_000
-EACH = 1.5  # seconds one function may take on one text
-WHOLE = 120  # seconds for all of them: a pattern that never ends is stopped here
+# Seconds one function may take on one text. The slowest honest function here takes about a
+# third of a second on this text and grows in step with it; a busy test machine has made that
+# 1.5 seconds. A pattern that grows with the square takes minutes, so the limit has room.
+EACH = 5.0
+WHOLE = 300  # seconds for all of them: a pattern that never ends is stopped here
 
 CODE = '''
 import sys, time

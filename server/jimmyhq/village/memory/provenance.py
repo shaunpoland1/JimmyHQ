@@ -7,13 +7,16 @@ the line's ``source``:
 - ``owner``: it cites something the owner said to this agent in chat
 - ``seen``: it cites this agent's own actions, refusals or the owner's decisions
 - ``village``: it comes from the village's own notes on what changed
-- ``web:unconfirmed``: it came from the web: it cites a search or a page the agent read,
-  or it is something about the owner that the agent marked as found online
+- ``web:unconfirmed``: it came from outside text: it cites a web search or page, a page
+  in the agent's browser, a result of an integration (mail included) or an answer to an
+  outside message, or it is something about the owner that the agent marked as found
+  online. The word "web" is kept for the stored value; the meaning is "outside, unconfirmed"
 - ``self-reported``: the agent's own account, backed by nothing in the record
 """
 
 from __future__ import annotations
 
+import functools
 import re
 from typing import Any
 
@@ -28,7 +31,11 @@ TOOL_KINDS = ("action", "validator_reject")
 SHARED_KINDS = ("breakroom", "board_post", "board_resolved")
 CHANGES = "changes"  # the evidence word for "the village's notes on what changed say so"
 WEB_PREFIX = "unconfirmed (web)"
-WEB_TOOLS = ("web_search", "web_read")
+# Tools of these kinds bring in text somebody outside wrote. So does every tool that is not
+# the village's own (an integration is named for its account and action), and so does an
+# answer to an outside message: the message is outside text and is not itself in the log.
+OUTSIDE_KINDS = ("web", "browser")
+OUTSIDE_TOOLS = ("reply_outside",)
 WEB = "web:unconfirmed"
 FAILURE_WORDS = re.compile(
     r"\b(fail|fails|failed|broken|doesn'?t work|does not work|can'?t|cannot|won'?t|"
@@ -61,12 +68,31 @@ def known_events(log: Any, agent_id: str, evidence: list[str]) -> list[Any]:
     return out
 
 
+@functools.cache
+def village_tools() -> dict[str, str]:
+    """The village's own tools and their kinds, by name."""
+    from jimmyhq.village import tools
+    return {str(s["name"]): str(s["kind"]) for s in tools.specs()}
+
+
+def brings_outside_text(tool: Any) -> bool:
+    """Does this tool bring in text that somebody outside wrote? A web tool or a browser
+    tool does, and so does a name that is not one of the village's own, which is an
+    integration. A name nobody knows is treated the same, so a new kind of tool is
+    unconfirmed until it is listed as the village's own."""
+    name = str(tool or "")
+    kind = village_tools().get(name)
+    return kind is None or kind in OUTSIDE_KINDS or name in OUTSIDE_TOOLS
+
+
 @rule("web_unconfirmed")
 def from_web(event: Any, agent_id: str) -> bool:
-    """Is this the agent's own search or page read that brought text in from the web?
-    A line that rests on one is the web's word, not something the agent saw to be true."""
+    """Is this one of the agent's own actions that brought in outside text (a search, a
+    page in the web tools or the browser, an integration's answer)? A line that rests on
+    one is somebody else's word, not something the agent saw to be true, and not the
+    owner's even if the text says so."""
     return (event.agent == agent_id and event.kind == "action"
-            and event.data.get("tool") in WEB_TOOLS and bool(event.data.get("ok")))
+            and bool(event.data.get("ok")) and brings_outside_text(event.data.get("tool")))
 
 
 def classify(agent_id: str, section: str | None, text: str, events: list[Any],
@@ -74,7 +100,8 @@ def classify(agent_id: str, section: str | None, text: str, events: list[Any],
     """The source of a line, from the events it cites (already checked by
     ``known_events``) and whether it rests on the village's notes.
 
-    The web comes first: a line that cites a web read is unconfirmed whatever else it
+    Outside text comes first: a line that cites a web or browser read, an integration's
+    answer or a reply to an outside message is unconfirmed whatever else it
     cites, so citing the owner beside a page does not turn the page into the owner's
     word. Once the owner confirms something, the line is rewritten citing them alone."""
     if section == "facts" and text.strip().lower().startswith(WEB_PREFIX):

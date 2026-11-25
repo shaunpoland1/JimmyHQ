@@ -128,8 +128,10 @@ agent uses them by itself. So:
   `result_chars` at a time; the cut is stated, with the `start` that reads on.
 - **The wall.** The web tools count toward the world's wall: four fruitless reads in a
   row and `web_read` is refused until a `web_search` finds something.
-- **Memory.** A line whose evidence is a web action is stored as `web:unconfirmed`,
-  whatever else it cites (`memory/provenance.py`).
+- **Memory.** A line whose evidence is an action that brought in outside text (a web
+  search or page, a page in the browser, an integration's answer, a reply to an outside
+  message) is stored as `web:unconfirmed`, whatever else it cites, and is shown to the
+  agent as "from outside, not confirmed" (`memory/provenance.py`).
 - **Receipts** are `lookup.searched` and `lookup.fetched` with `private=False`, actor
   `agent:<id>`, caller `village.web`.
 

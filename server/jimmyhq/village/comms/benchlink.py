@@ -52,6 +52,9 @@ WORK, FINDING, PRIORITY, DONE = "village.work", "village.finding", "village.prio
 HAND = "village.hand"
 KINDS = (WORK, FINDING, PRIORITY, DONE, HAND)
 NEEDS_OWNER = (WORK, FINDING, PRIORITY, HAND)  # the agent waits on these; a done card informs
+# Only these can be corrected (``correct``), so only their first body is kept in
+# ``village.db``. A request's card is never copied here: its values belong to hands.db.
+CORRECTABLE = (WORK, FINDING)
 SOURCE = "Village"
 REOPEN = "reopen"
 TITLE_CHARS = 200
@@ -302,7 +305,8 @@ def file(v, agent_id: str, kind: str, title: str, *, summary: str = "", body: st
     _keep_copies(v, agent_id, card_id, files)
     now = v.clock.now()
     data = dict(extra or {})
-    data["first_body"] = fields["body"]
+    if kind in CORRECTABLE:
+        data["first_body"] = fields["body"]
     if task:
         data["task"] = task
     if replaces:

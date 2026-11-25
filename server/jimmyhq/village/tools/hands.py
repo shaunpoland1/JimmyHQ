@@ -14,8 +14,10 @@ with the core's answer:
   framed as untrusted. An action that changed something without asking leaves a "done"
   card for the owner, with Undo where the provider can undo.
 - **It needs the owner's yes** (``NeedsApproval``). Nobody was called. A card goes to the
-  Bench showing exactly what would be done: the action, the account, every argument as it
-  would be sent, who receives it and how many. The agent now waits on the owner
+  Bench naming the action, the account, each argument with its size and how many receive
+  it. The values themselves stay in ``hands.db``: a card is a Tape event and is kept for
+  ever, so it never holds one. The owner's screen shows them beside the card from the
+  hands API while the request waits. The agent now waits on the owner
   (``World.submit``). It cannot change the request; it can withdraw it. The executor in
   ``jimmyhq.hands.execute`` performs the frozen request when the owner approves.
 - **It was refused** (``HandRefused``). The core's sentence goes to the agent. A limit or
@@ -24,7 +26,6 @@ with the core's answer:
 
 from __future__ import annotations
 
-import json
 import logging
 from typing import Any
 
@@ -42,13 +43,29 @@ KIND = "hand"
 MODES = (WORK, EXPLORE)
 WITHDRAW = "withdraw_request"
 RESERVED = frozenset({"thought"})  # every tool's first argument is the agent's thought
-LOGGED_CHARS = 200  # of one argument, in the log
+
+
+def size_of(value: Any) -> str:
+    """How big one argument is, in words, without saying what it is."""
+    if isinstance(value, str):
+        return f"{len(value)} characters"
+    if isinstance(value, bool):
+        return "yes or no"
+    if isinstance(value, (int, float)):
+        return "a number"
+    if isinstance(value, (list, tuple)):
+        return f"{len(value)} items"
+    if isinstance(value, dict):
+        return f"{len(value)} fields"
+    return "empty" if value is None else "a value"
 
 
 def said(args: dict[str, Any]) -> dict[str, Any]:
-    """An agent's arguments as the log keeps them: the start of each, scrubbed."""
-    short = {k: (v[:LOGGED_CHARS] if isinstance(v, str) else v) for k, v in (args or {}).items()}
-    return logged.args(short)
+    """Rule ``hand_values_stay_in_hands``: an agent's arguments as the village log keeps
+    them, which is their names and sizes. The log lives in ``village.db`` and is never
+    erased, and a request's values may be a message to someone: they are kept only in
+    ``hands.db``, where answering the request erases them."""
+    return logged.args({str(k): size_of(v) for k, v in (args or {}).items()})
 
 
 # --- which tools --------------------------------------------------------------------------
@@ -124,30 +141,30 @@ def called(ctx: Any, out: Any, kept: dict[str, Any]) -> Any:
 # --- asking the owner ---------------------------------------------------------------------
 
 
-def _value(value: Any) -> str:
-    return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
-
-
 def card_fields(v: Any, need: Any) -> dict[str, Any]:
-    """Rule ``hand_card_shows_exactly``: the card for a request. The action in plain
-    words, the account, every argument in full as it will be sent (the owner's fixed
-    values included), who receives it and how many, and the request's fingerprint."""
+    """Rule ``hand_card_keeps_no_values``: the card for a request. The action in plain
+    words, the account, each argument's name and size, how many receive it, and the
+    request's fingerprint. Never a value: a card is a ``bench.filed`` event on the Tape,
+    which keeps it for ever. The owner sees the values beside the card, read from
+    ``hands.db`` while the request waits (``GET /api/hands/requests/by-card/{id}``)."""
     name = getattr(v, "name", lambda a: a)(need.agent)
     lines = [f"{name} asks to use \"{need.label}\" on the account \"{need.account}\".",
-             "Nothing has been done yet. If you approve, exactly this is sent, and nothing "
-             "else:", ""]
-    for arg in sorted(need.arguments):
-        lines += [f"--- {arg} ---", _value(need.arguments[arg]), ""]
-    if not need.arguments:
-        lines += ["(This action takes no arguments.)", ""]
-    lines.append("--- end of what is sent ---")
+             "Nothing has been done yet. If you approve, exactly the values shown with this "
+             "card are sent, and nothing else.", ""]
+    if need.arguments:
+        lines.append("What it would send:")
+        lines += [f"- {arg}: {size_of(need.arguments[arg])}" for arg in sorted(need.arguments)]
+    else:
+        lines.append("(This action takes no arguments.)")
+    lines += ["", "The values themselves are kept only while the request waits, and are "
+                  "erased once it is answered. They are not part of this card's record."]
     details = [("Account", need.account), ("Action", f"{need.label} ({need.action})"),
                ("What it does", need.effect)]
     if need.recipients:
-        details.append((f"Goes to {len(need.recipients)}",
-                        ", ".join(need.recipients)))
+        count = len(need.recipients)
+        details.append(("Goes to", f"{count} recipient{'' if count == 1 else 's'}"))
     if need.amount is not None:
-        details.append(("Amount", _value(need.amount)))
+        details.append(("Amount", "Shown with the values while the request waits"))
     details += [("Can be undone", "Yes" if need.can_undo else "No"),
                 ("Fingerprint", need.fingerprint)]
     why = None if need.why == "ask" else (
@@ -217,6 +234,7 @@ SPECS = [
 RULES = [
     ("hand_tools_from_rules", "hands.max_tools_per_agent", offered),
     ("hand_result_is_village_written", None, called),
-    ("hand_card_shows_exactly", None, card_fields),
+    ("hand_card_keeps_no_values", None, card_fields),
+    ("hand_values_stay_in_hands", None, said),
     ("hand_request_withdrawn", None, withdraw_request),
 ]

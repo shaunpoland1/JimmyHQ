@@ -25,7 +25,7 @@ from jimmyhq import hands
 specs = await hands.tools_for(core, "ada")                 # what to offer this agent now
 out = await hands.call(core, agent="ada", tool="mail_messages_list", arguments={})
 if isinstance(out, hands.NeedsApproval):                   # nobody was called
-    card_id = ...                                          # file a card showing out.arguments
+    card_id = ...                                          # file a card naming out.arguments, not their values
     hands.attach_card(core, out.fingerprint, card_id)
 # later, once the owner said yes to that card:
 done = await hands.perform(core, out.fingerprint)          # exactly that request, once
@@ -57,7 +57,7 @@ One rule for each **agent, account, action** (`hands.rule_set`). It holds:
 |---|---|
 | `level` | `read`, `ask` or `alone` (below) |
 | `arguments` | Each argument is `open` (the agent sets it), `fixed` (the owner's value) or `hidden`. Required ones start open, the rest hidden |
-| `limits` | `per_day`; `recipients` (`owner`, `known`, `anyone`); `max_amount` |
+| `limits` | `per_day`; `recipients` (`owner`, `known`, `anyone`); `max_amount` (below) |
 | `show_addresses`, `fields` | What of an answer the agent sees |
 | `effect`, `effect_from` | As the provider said, or as the owner corrected |
 | `version` | The action's version when the owner looked |
@@ -110,7 +110,11 @@ What `call` checks, in order:
 
 1. **A rule.** No rule for this agent and tool: refused.
 2. **Unchanged.** The action's version is the pinned one, its account is connected and
-   its provider is on. Otherwise the tool is withdrawn.
+   its provider is on. Otherwise the tool is withdrawn. The version is checked against
+   the provider's list as it is now: a list kept longer than `hands.actions_check_s`
+   (60 seconds) is asked for again, and if the provider cannot be asked, nothing goes
+   out (`hand_checked_fresh_before_running`). The longer `hands.actions_cache_s` only
+   decides which tools are offered.
 3. **Arguments.** The model's arguments are checked against the open ones and their
    types. Naming a fixed or hidden argument, or one the action does not have, is refused:
    a model can never set one. A tool takes flat arguments only (text, a number, yes or
@@ -120,11 +124,24 @@ What `call` checks, in order:
 4. **Level**, as in the table. `ask`, and `alone` outside a limit, return
    `NeedsApproval` and call nobody.
 5. **Repeat.** A reading with the same arguments within `hands.repeat_minutes` is
-   answered from the kept copy with no new call. Never for a change.
+   answered from the kept copy with no new call. Never for a change. The copy is the
+   shaped answer, so it is filed under the whole rule and the settings that shape it
+   (`hands.hidden_fields`, `hands.value_chars`): once the owner changes the rule or
+   hides another field, the next reading is a fresh call. The worker's `hands.settle`
+   job deletes copies older than the window.
 6. **Caps.** `hands.calls_per_day` for one agent on one account,
    `hands.calls_per_month` for one provider, and the rule's own `per_day`. Counted from
    the run ledger, so a failed call counts and a restart loses nothing.
 7. **Run, once.** See below.
+
+**The limits on an action that runs alone.** "Who may receive" checks the arguments the
+adapter names as recipients. An open argument whose name suggests it names someone
+(it starts with `to`, or has `cc`, `bcc`, `recipient`, `email`, `attendee`, `invitee`,
+`participant` or `guest` in it) and is not among them cannot be checked: a rule with
+an `owner` or `known` limit may not leave one open, and a call that fills one in asks
+the owner. "The largest amount" lets through only a finite number from 0 up to the
+limit; anything else (below zero, `nan`, not a number) asks. A number argument is never
+`nan` or infinite.
 
 An agent holds at most `hands.max_tools_per_agent` tools. A tool is named
 `<account>_<action>` in lower-case letters, digits and underscores, 64 characters at most.
@@ -143,7 +160,30 @@ rule is the same rule, and the action is still the pinned version. So what runs 
 the card showed, or nothing. The caller is responsible for the approval itself; this
 module never reads a card.
 
-Once performed, declined or expired, the stored arguments are erased.
+Once performed, declined or expired, the stored arguments are erased from `hands.db`.
+
+**The card holds no values.** The village files the request's Bench card
+(`village/tools/hands.py`, `card_fields`) with the action, the account, each argument's
+name and size, how many receive it, whether there is an amount, and the fingerprint:
+nothing an argument says. A card is a `bench.filed` event and the Tape keeps it for ever,
+so the values stay in `hands.db` alone, where answering the request erases them. The
+village keeps no copy either: `village.db` holds no first body for a request's card, and
+the agent's own log keeps each argument's name and size only.
+
+The owner still reads every value before approving. The Bench card of a request
+(`village.hand`) shows them from `GET /api/hands/requests/by-card/{card_id}`, which only
+the signed-in owner may call (a read or write token gets 403). While the request waits it
+returns `{card_id, agent, account, action, tool, waiting: true, arguments}`; once it is
+performed, declined, withdrawn or gone with its account it returns `waiting: false` and
+`arguments: null`, and the card says these details are no longer kept. A card no request
+is tied to is a 404.
+
+**Cards filed before this change are not rewritten.** Earlier request cards carry their
+values in the `bench.filed` event, and earlier village rows keep the first body. The Tape
+is append-only and an old card's values stay there until the owner erases that card's
+events (`Tape.erase`); erasing a `bench.filed` event also drops the card from the
+approval count behind "suggest Alone", since that count only tallies decisions on cards
+whose filing it saw.
 
 ## The executor
 
@@ -234,7 +274,7 @@ is not kept for a repeat: the note is written fresh each time.
 |---|---|---|---|
 | A provider's key or other secret | never | never (secret store only) | never |
 | A fixed or hidden argument | never, by name or value | a fixed value is in the owner's `hands.rule_set` | never |
-| Argument values of a call | its own open ones | never: names, sizes and a recipient count | never |
+| Argument values of a call | its own open ones | names, sizes and a recipient count (a request's Bench card too; see above) | never |
 | The answer | shaped, framed, once | never: its size | never |
 | Addresses in an answer | hidden unless the rule shows them | never | never |
 | A provider's error text | one scrubbed line | never: a kind | the exception's type only |
@@ -528,17 +568,18 @@ None of this is trusted to start a reading at `alone`: Composio calls its hints 
 effort, and a name is only a name. The owner sees where the effect came from when
 switching an action on and can correct it or choose `alone`. `recipients` and
 `amount` are filled only for an action that does something, and only where an argument has
-a plain name (`to`, `cc`, `attendees`; `amount` when exactly one numeric argument has an
-amount's name).
+a plain name (`to`, `cc`, `extra_recipients`, `cc_emails`, `attendees`; `amount` when
+exactly one numeric argument has an amount's name).
 
 **Arguments.** A tool's `input_parameters` is passed on as the action's schema. One with an
 object or list-of-objects argument is listed but "cannot be offered yet" until that
 argument is fixed or hidden.
 
-**Version.** The tool's `version` plus a short fingerprint of its description, schema and
-tags. A change withdraws the tool until the owner reviews it. The execute call is not
-pinned to that version (the adapter is not told it), so a change between the core's
-refreshes of the action list runs the latest.
+**Version.** The tool's `version` plus a short fingerprint of its name, both
+descriptions (`description` and `human_description`), schema and tags: everything the
+owner reads and the agent is told. A change withdraws the tool until the owner reviews it.
+The execute call is not pinned to that version (the adapter is not told it), so a change
+inside the last `hands.actions_check_s` before a call runs the latest.
 
 **Errors.** Each says what to do: a refused key, no balance, an unknown tool, an account no
 longer connected or expired ("Connect the account again"), arguments Composio did not

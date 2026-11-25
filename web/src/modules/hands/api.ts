@@ -200,6 +200,17 @@ export type DependentRule = { action: string; tool: string; label: string; level
 export type Dependents = { account: string; agents: { agent: string; rules: DependentRule[] }[]; rules: number; waiting_requests: number };
 
 export type RunStatus = "started" | "done" | "failed" | "unknown";
+/** A request that waited for the owner, as its Bench card shows it. `arguments` is null once it was answered: the values were erased. */
+export type RequestValues = {
+  card_id: string;
+  agent: string;
+  account: string;
+  action: string;
+  tool: string;
+  waiting: boolean;
+  arguments: Record<string, unknown> | null;
+};
+
 export type Run = {
   id: string;
   agent: string;
@@ -258,4 +269,7 @@ export const handsApi = {
   removeRule: (agent: string, account: string, action: string) => request<{ ok: true }>("DELETE", `${BASE}/rules?agent=${enc(agent)}&account=${enc(account)}&action=${enc(action)}`),
 
   runs: (agent: string, limit = 30) => request<{ runs: Run[] }>("GET", `${BASE}/runs?agent=${enc(agent)}&limit=${limit}`),
+
+  /** What a waiting request would send, for its Bench card. Owner only. */
+  requestValues: (cardId: string) => request<RequestValues>("GET", `${BASE}/requests/by-card/${enc(cardId)}`),
 };

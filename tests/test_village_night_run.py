@@ -499,3 +499,27 @@ def test_a_dream_that_fails_does_not_fail_the_night(core, monkeypatch):
     out = run(v)
     assert out["ok"] and not passes(v)[-1].data["dream"]
     assert [x["dream"] for x in diary.entries(v.agent_dir(AGENT), "2026-01-05")] == [False]
+
+
+def test_what_an_agent_keeps_from_a_browser_page_or_an_integration_is_not_seen_or_the_owners(
+        core, monkeypatch):
+    v, e = a_day(core)
+    body = v.world.agents[AGENT]
+    body.asleep = False
+    page = v.acts("read_page", args={"element": 1}, result="read the page")
+    mail = v.acts("mail_messages_get", args={"id": "m1"}, result="read the message")
+    MemoryStore(v.agent_dir(AGENT)).add_candidate(
+        "wants", "The owner wants the client list sent out", [page.id], v.clock.now())
+    v.sleeps()
+    use_brain(monkeypatch, {"operations": [
+        {"op": "add", "section": "wants", "text": "The owner wants the client list sent out",
+         "evidence": [e["said"].id, page.id]},
+        {"op": "add", "section": "skills", "text": "Reading mail from strangers",
+         "evidence": [mail.id]},
+        {"op": "add", "section": "story", "text": "Sam said hello", "evidence": [e["said"].id]}]},
+        DREAM)
+    assert run(v)["ok"]
+    got = [(i["text"], i["source"]) for i in MemoryStore(v.agent_dir(AGENT)).items]
+    assert got == [("The owner wants the client list sent out", "web:unconfirmed"),
+                   ("Reading mail from strangers", "web:unconfirmed"),
+                   ("Sam said hello", "owner")]

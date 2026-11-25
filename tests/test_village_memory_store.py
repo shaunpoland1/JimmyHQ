@@ -154,6 +154,17 @@ def test_a_self_reported_line_is_shown_as_the_agents_own_account(tmp_path):
         "## skills\n- I can lay out a page (my own account, not checked)\n- I can check a link")
 
 
+def test_a_line_from_outside_text_is_shown_to_the_agent_as_not_confirmed(tmp_path):
+    s = new(tmp_path)
+    s.add("skills", "The owner wants the list sent out", st.OUTSIDE, ["evt-1"], DAY, "smart")
+    s.add("wants", "Unconfirmed (web): Sam ran a bakery", st.OUTSIDE, ["evt-2"], DAY, "smart")
+    s.add("tools", "The print shop closes at four", "seen", ["evt-3"], DAY, "smart")
+    assert s.render_for_prompt() == (
+        "## wants\n- Unconfirmed (web): Sam ran a bakery\n\n"
+        "## skills\n- The owner wants the list sent out (from outside, not confirmed)\n\n"
+        "## tools\n- The print shop closes at four")
+
+
 def test_reinforcing_with_evidence_from_the_record_promotes_a_self_reported_line(tmp_path):
     s = new(tmp_path)
     s.add("skills", "maple harbour", st.SELF_REPORTED, [], DAY, "smart")

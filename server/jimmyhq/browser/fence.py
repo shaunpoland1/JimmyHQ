@@ -206,7 +206,7 @@ class FenceProxy:
         try:
             await self._handle(reader, writer)
         except (OSError, TimeoutError, asyncio.IncompleteReadError, asyncio.LimitOverrunError,
-                ValueError):
+                ValueError, IndexError):
             pass
         finally:
             with contextlib.suppress(OSError, RuntimeError):
@@ -238,23 +238,116 @@ class FenceProxy:
             writer.write(_answer("403 Forbidden", e.rule, e.sentence))
             await writer.drain()
             return
+        body_length = 0
+        if not tunnel:
+            headers = _header_values(lines[1:])
+            if "transfer-encoding" in headers:
+                writer.write(_answer("411 Length Required", "browser_request_shape",
+                                     "A request body must say how long it is; chunked "
+                                     "bodies are not sent."))
+                return
+            try:
+                body_length = _body_length(headers.get("content-length", []))
+            except ValueError:
+                writer.write(_answer("400 Bad Request", "browser_request_shape",
+                                     "The request's length was not valid."))
+                return
         try:
             up_reader, up_writer = await asyncio.wait_for(
                 asyncio.open_connection(checked.address, checked.port), CONNECT_WAIT_S)
         except (OSError, TimeoutError):
             writer.write(_answer("502 Bad Gateway", "", "The site could not be reached."))
             return
-        if tunnel:
-            writer.write(b"HTTP/1.1 200 Connection established\r\n\r\n")
-            await writer.drain()
-        else:
+        try:
+            if tunnel:
+                writer.write(b"HTTP/1.1 200 Connection established\r\n\r\n")
+                await writer.drain()
+                await asyncio.gather(_pipe(reader, up_writer), _pipe(up_reader, writer))
+                return
             kept = [line for line in lines[1:] if line and not line.lower().startswith(
                 ("proxy-", "connection:", "keep-alive:"))]
             request = "\r\n".join([f"{method} {checked.target} {version}", *kept,
                                    "Connection: close"]) + "\r\n\r\n"
             up_writer.write(request.encode("latin-1"))
             await up_writer.drain()
-        await asyncio.gather(_pipe(reader, up_writer), _pipe(up_reader, writer))
+            # Exactly one request: its head and its body, and nothing the browser sends
+            # after it is read, so a second request on this connection is never passed on.
+            await _copy_exactly(reader, up_writer, body_length)
+            await _relay_answer(up_reader, writer, head_only=method.upper() == "HEAD")
+        finally:
+            with contextlib.suppress(OSError, RuntimeError):
+                up_writer.close()
+
+
+def _header_values(lines: list[str]) -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {}
+    for line in lines:
+        name, sep, value = line.partition(":")
+        if sep:
+            out.setdefault(name.strip().lower(), []).append(value.strip())
+    return out
+
+
+def _body_length(values: list[str]) -> int:
+    """The one Content-Length a request names (0 when it names none). Two that differ,
+    or one that is not a plain number, are an error: the proxy and the site could
+    otherwise read the request's end in different places."""
+    if not values:
+        return 0
+    if len(set(values)) != 1 or not values[0].isdigit():
+        raise ValueError("content-length")
+    return int(values[0])
+
+
+async def _copy_exactly(reader: asyncio.StreamReader, writer: asyncio.StreamWriter,
+                        count: int) -> None:
+    while count > 0:
+        data = await reader.read(min(count, 65536))
+        if not data:
+            raise asyncio.IncompleteReadError(b"", count)
+        writer.write(data)
+        await writer.drain()
+        count -= len(data)
+
+
+async def _relay_answer(up: asyncio.StreamReader, out: asyncio.StreamWriter, *,
+                        head_only: bool) -> None:
+    """Pass one answer from the site to the browser and stop where it ends. Its
+    Connection header says close and its Keep-Alive is dropped, so the browser does not
+    send another request down this connection, and the connection is closed after it
+    even if the site would keep it open."""
+    while True:
+        head = await up.readuntil(b"\r\n\r\n")
+        lines = head.decode("latin-1").split("\r\n")
+        status = int(lines[0].split(" ", 2)[1])
+        headers = _header_values(lines[1:])
+        kept = [line for line in lines[1:] if line and not line.lower().startswith(
+            ("connection:", "keep-alive:", "proxy-connection:"))]
+        out.write(("\r\n".join([lines[0], *kept, "Connection: close"]) + "\r\n\r\n")
+                  .encode("latin-1"))
+        await out.drain()
+        if status < 200 and status != 101:
+            continue  # an interim answer (100, 103): the real one follows
+        break
+    if head_only or status in (101, 204, 304):
+        return
+    if any("chunked" in v.lower() for v in headers.get("transfer-encoding", [])):
+        while True:
+            line = await up.readuntil(b"\r\n")
+            out.write(line)
+            size = int(line.split(b";")[0].strip(), 16)
+            if size == 0:
+                while (trailer := await up.readuntil(b"\r\n")) != b"\r\n":
+                    out.write(trailer)
+                out.write(b"\r\n")
+                await out.drain()
+                return
+            await _copy_exactly(up, out, size + 2)
+    elif "content-length" in headers:
+        await _copy_exactly(up, out, _body_length(headers["content-length"]))
+    else:  # no length: the body ends when the site closes
+        await _pipe(up, out)
+    await out.drain()
 
 
 # --- what may be sent -----------------------------------------------------------------------

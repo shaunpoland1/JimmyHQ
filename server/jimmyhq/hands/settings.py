@@ -74,6 +74,12 @@ NUMBERS: dict[str, tuple[int, int, int, str, str]] = {
         3600, 0, 86400, "Remember an account's list of actions for (seconds)",
         "How long a discovered list of actions is reused before asking the provider again.",
     ),
+    "actions_check_s": (
+        60, 0, 3600, "Before an action runs, ask again if the list is older than (seconds)",
+        "Right before an agent's call or an approved request goes out, the provider is "
+        "asked again whether the action is still the one you reviewed, unless it was "
+        "asked this recently. If it cannot be asked, nothing goes out. 0 asks every time.",
+    ),
     "composio_timeout_s": (
         30, 1, 300, "Composio: seconds to wait for one request",
         "How long one request to Composio may take. A provider's own \"timeout_s\" "
@@ -111,8 +117,8 @@ NUMBERS: dict[str, tuple[int, int, int, str, str]] = {
 # How many calls and approvals are allowed is not among them: those stay in sight.
 ADVANCED = frozenset({
     "request_expires_h", "repeat_minutes", "value_chars", "result_chars", "run_timeout_s",
-    "actions_cache_s", "composio_timeout_s", "mcp_start_timeout_s", "mcp_call_timeout_s",
-    "mcp_idle_s", "mcp_max_message_bytes", "mcp_max_tools",
+    "actions_cache_s", "actions_check_s", "composio_timeout_s", "mcp_start_timeout_s",
+    "mcp_call_timeout_s", "mcp_idle_s", "mcp_max_message_bytes", "mcp_max_tools",
 })
 
 

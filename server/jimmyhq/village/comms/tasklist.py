@@ -155,15 +155,49 @@ def items(v, agent_id: str) -> list[Item]:
             continue  # its own task, left open for days: off the list, so the list stays short
         status = "done" if done else "set aside" if ref in parked else \
             "current" if ref == current else "open"
-        note = {"owner": f" ({name} asked in chat)", "own": " (your own task)"}.get(source, "")
-        filed_by = str(t.get("filed_by") or "")
+        outsider = outside_hand(t, agent_id)
+        if outsider and source == "owner":
+            source = "task"  # someone else's words are not the owner asking in chat
+        note = "" if outsider else \
+            {"owner": f" ({name} asked in chat)", "own": " (your own task)"}.get(source, "")
         title = t["title"]
-        if filed_by.startswith("app:"):
-            title = app_title(filed_by.removeprefix("app:"), title)
-            if t.get("notes") and not done:
+        if outsider:
+            title = outside_title(outsider, title)
+            by = t.get("edited_by") or {}
+            if outsider.startswith("app:") and by.get("notes") == t.get("filed_by") \
+                    and t.get("notes") and not done:
                 note += f" ({t['notes']})"  # work an app gave out: who gave it, and its details
         out.append(Item(ref, title + note, status, source, t["id"], title))
     return out
+
+
+def outside_hand(task: dict, agent_id: str) -> str | None:
+    """Rule ``task_words_name_their_writer``: who wrote this task, when that is anyone but
+    the owner, the village itself or this agent. Looks at who filed it and at who last
+    changed its title, notes and assignee, so a task the owner filed and a token later
+    reworded is not the owner's. None means the words are the owner's, or the agent's own."""
+    trusted = {"owner", record.SYSTEM, actor(agent_id)}
+    by = task.get("edited_by") or {}
+    filed_by = str(task.get("filed_by") or "")
+    for who in (by.get("title"), by.get("notes"), by.get("assignee"), filed_by):
+        if who and who not in trusted:
+            return str(who)
+    return None
+
+
+def outside_title(who: str, title: str) -> str:
+    """Rule ``outside_titles_are_marked``: a title someone other than the owner wrote is
+    shown as theirs. An app is named as ``app_title`` names it. Anything else (an access
+    token, another agent, a machine) is named by who it is, with the title in quotes it
+    cannot close, on one line, so it cannot pass as the owner's request."""
+    if who.startswith("app:"):
+        return app_title(who.removeprefix("app:"), title)
+    said = " ".join(str(title).split()).replace('"', "'")
+    kind, _, name = who.partition(":")
+    label = " ".join(name.split()).replace('"', "'")[:40]
+    label = {"token": f"the access token {label}", "agent": f"the agent {label}"}.get(
+        kind, " ".join(who.split()).replace('"', "'")[:40])
+    return f'work from {label}, not the owner: "{said}"'
 
 
 def app_title(app_id: str, title: str) -> str:
@@ -289,7 +323,15 @@ def asked_by_owner(v, agent_id: str, ref: str | None) -> bool:
     the owner from work they did not ask for, not from what they asked for."""
     if not ref:
         return False
-    return any(e.data.get("task") == ref for e in v.log.query(agent=agent_id, kinds=["task_taken"]))
+    for e in v.log.query(agent=agent_id, kinds=["task_taken"]):
+        if e.data.get("task") == ref:
+            # Rule ``task_words_name_their_writer``: not once someone else has reworded it.
+            try:
+                task = tasks.service(v.core).get(str(e.data.get("task_id") or ""))
+            except tasks.TaskError:
+                return False
+            return outside_hand(task, agent_id) is None
+    return False
 
 
 def own_duplicate(mine: list[Item], title: str) -> Item | None:

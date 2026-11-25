@@ -292,6 +292,10 @@ class HandsStore:
                 " ON CONFLICT(name) DO UPDATE SET ts_ms = excluded.ts_ms, body = excluded.body",
                 (name, agent, account, now, body))
 
+    def drop_kept(self, older_than_ms: int) -> int:
+        """Delete every kept copy made before ``older_than_ms``. Returns how many went."""
+        return self._do("DELETE FROM kept WHERE ts_ms < ?", (older_than_ms,))
+
     def kept(self, name: str, since_ms: int) -> dict[str, Any] | None:
         return self._one("SELECT * FROM kept WHERE name = ? AND ts_ms >= ?", (name, since_ms))
 
